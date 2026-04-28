@@ -2,34 +2,883 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hi Danny</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Slap War</title>
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      margin: 0;
       background: #000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      font-family: Impact, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
     }
-    h1 {
-      color: white;
-      font-size: 2.5rem;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    img {
-      width: 90%;
-      max-width: 500px;
-      border-radius: 12px;
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
     }
   </style>
 </head>
 <body>
-  <h1>Hi Danny 👋</h1>
-  <img src="https://i.imgflip.com/1bij.jpg" alt="Peep Show Meme">
+<canvas id="gameCanvas"></canvas>
+
+<!-- Block 1: Constants -->
+<script>
+const TILE_W          = 64;
+const TILE_H          = 32;
+const WALL_H          = 22;
+const MAP_W           = 42;
+const MAP_H           = 42;
+const PLAYER_SPEED    = 4.2;
+const SKELETON_COUNT  = 8;
+const SKELETON_SPEED  = 0.95;
+const LIGHT_RADIUS    = 195;
+const JOYSTICK_RADIUS = 62;
+const JOYSTICK_KNOB   = 26;
+</script>
+
+<!-- Block 2: Classes -->
+<script>
+// ─── Coordinate transforms ─────────────────────────────────────────────────
+function worldToScreen(wx, wy, camX, camY, W, H) {
+  return {
+    sx: (wx - wy) * (TILE_W / 2) - camX + W / 2,
+    sy: (wx + wy) * (TILE_H / 2) - camY + H / 2
+  };
+}
+
+function screenToWorld(sx, sy, camX, camY, W, H) {
+  const dx = sx - W / 2 + camX;
+  const dy = sy - H / 2 + camY;
+  return {
+    wx: (dx / (TILE_W / 2) + dy / (TILE_H / 2)) / 2,
+    wy: (dy / (TILE_H / 2) - dx / (TILE_W / 2)) / 2
+  };
+}
+
+// ─── DungeonMap ────────────────────────────────────────────────────────────
+class DungeonMap {
+  constructor() {
+    this.tiles = [];
+    this._generate();
+  }
+
+  _generate() {
+    this.tiles = Array.from({ length: MAP_H }, () => Array(MAP_W).fill('wall'));
+
+    const rooms = [
+      { x: 3,  y: 3,  w: 13, h: 11 },
+      { x: 25, y: 3,  w: 13, h: 11 },
+      { x: 3,  y: 27, w: 13, h: 11 },
+      { x: 25, y: 27, w: 13, h: 11 },
+    ];
+
+    rooms.forEach(r => {
+      for (let ty = r.y; ty < r.y + r.h; ty++)
+        for (let tx = r.x; tx < r.x + r.w; tx++)
+          if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H)
+            this.tiles[ty][tx] = 'floor';
+    });
+
+    const corridor = (x0, x1, y0, y1) => {
+      for (let ty = Math.min(y0, y1); ty <= Math.max(y0, y1); ty++)
+        for (let tx = Math.min(x0, x1); tx <= Math.max(x0, x1); tx++)
+          if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H)
+            this.tiles[ty][tx] = 'floor';
+    };
+
+    const midY01 = rooms[0].y + Math.floor(rooms[0].h / 2);
+    corridor(rooms[0].x + rooms[0].w - 1, rooms[1].x, midY01 - 1, midY01 + 1);
+
+    const midY23 = rooms[2].y + Math.floor(rooms[2].h / 2);
+    corridor(rooms[2].x + rooms[2].w - 1, rooms[3].x, midY23 - 1, midY23 + 1);
+
+    const midX02 = rooms[0].x + Math.floor(rooms[0].w / 2);
+    corridor(midX02 - 1, midX02 + 1, rooms[0].y + rooms[0].h - 1, rooms[2].y);
+
+    const midX13 = rooms[1].x + Math.floor(rooms[1].w / 2);
+    corridor(midX13 - 1, midX13 + 1, rooms[1].y + rooms[1].h - 1, rooms[3].y);
+  }
+
+  getTile(tx, ty) {
+    if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return 'wall';
+    return this.tiles[ty][tx];
+  }
+
+  // entities: array of objects with { wx, wy, draw(ctx, feetX, feetY, elapsed) }
+  render(ctx, cam, W, H, entities, elapsed) {
+    for (let ty = 0; ty < MAP_H; ty++) {
+      for (let tx = 0; tx < MAP_W; tx++) {
+        const { sx, sy } = worldToScreen(tx, ty, cam.x, cam.y, W, H);
+
+        if (sx < -TILE_W * 2 || sx > W + TILE_W * 2 ||
+            sy < -TILE_H * 2 || sy > H + TILE_H * 3) continue;
+
+        const tile = this.tiles[ty][tx];
+        if (tile === 'floor') this._drawFloor(ctx, sx, sy);
+        else                  this._drawWall(ctx, sx, sy);
+      }
+
+      // Inject all entities at their correct painter's-algorithm depth row
+      for (const entity of entities) {
+        if (Math.floor(entity.wy) === ty) {
+          const { sx, sy } = worldToScreen(entity.wx, entity.wy, cam.x, cam.y, W, H);
+          entity.draw(ctx, sx, sy + TILE_H / 2, elapsed);
+        }
+      }
+    }
+  }
+
+  _drawFloor(ctx, sx, sy) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(sx,              sy);
+    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx,              sy + TILE_H);
+    ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
+    ctx.closePath();
+    ctx.fillStyle   = '#1a1510';
+    ctx.fill();
+    ctx.strokeStyle = '#252018';
+    ctx.lineWidth   = 0.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  _drawWall(ctx, sx, sy) {
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.moveTo(sx,              sy);
+    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx,              sy + TILE_H);
+    ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
+    ctx.closePath();
+    ctx.fillStyle   = '#2d2824';
+    ctx.fill();
+    ctx.strokeStyle = '#3d3830';
+    ctx.lineWidth   = 0.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(sx - TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx,               sy + TILE_H);
+    ctx.lineTo(sx,               sy + TILE_H + WALL_H);
+    ctx.lineTo(sx - TILE_W / 2,  sy + TILE_H / 2 + WALL_H);
+    ctx.closePath();
+    ctx.fillStyle = '#1a1510';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(sx,               sy + TILE_H);
+    ctx.lineTo(sx + TILE_W / 2,  sy + TILE_H / 2);
+    ctx.lineTo(sx + TILE_W / 2,  sy + TILE_H / 2 + WALL_H);
+    ctx.lineTo(sx,               sy + TILE_H + WALL_H);
+    ctx.closePath();
+    ctx.fillStyle = '#141210';
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// ─── Player ────────────────────────────────────────────────────────────────
+class Player {
+  constructor(startX, startY) {
+    this.wx        = startX;
+    this.wy        = startY;
+    this.targetX   = startX;
+    this.targetY   = startY;
+    this.moving    = false;
+    this.facing    = 2;
+    this.animFrame = 0;
+    this.animTimer = 0;
+  }
+
+  setTarget(wx, wy) {
+    this.targetX = wx;
+    this.targetY = wy;
+    this.moving  = true;
+  }
+
+  update(dt) {
+    if (!this.moving) {
+      this.animFrame = 0;
+      this.animTimer = 0;
+      return;
+    }
+
+    const dx   = this.targetX - this.wx;
+    const dy   = this.targetY - this.wy;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 0.1) {
+      this.wx     = this.targetX;
+      this.wy     = this.targetY;
+      this.moving = false;
+      return;
+    }
+
+    const speed = PLAYER_SPEED * dt / 16.67;
+    this.wx += (dx / dist) * speed;
+    this.wy += (dy / dist) * speed;
+
+    const angle = Math.atan2(dy, dx);
+    this.facing = Math.round(((angle + Math.PI) / (Math.PI * 2)) * 8) % 8;
+
+    this.animTimer += dt;
+    if (this.animTimer > 95) {
+      this.animFrame = (this.animFrame + 1) % 8;
+      this.animTimer = 0;
+    }
+  }
+
+  draw(ctx, feetX, feetY, elapsed) {
+    ctx.save();
+
+    const bob  = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 3 : 0;
+    const gy   = feetY + bob;
+    const sway = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 2 : 0;
+
+    const flipX = this.facing >= 3 && this.facing <= 5;
+    if (flipX) {
+      ctx.translate(feetX, 0);
+      ctx.scale(-1, 1);
+      ctx.translate(-feetX, 0);
+    }
+
+    // Shadow
+    ctx.beginPath();
+    ctx.ellipse(feetX, gy + 3, 11, 4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fill();
+
+    // Legs
+    const step = this.moving ? (this.animFrame % 2 === 0 ? 3 : 0) : 0;
+    ctx.fillStyle = '#3a2810';
+    ctx.fillRect(feetX - 6 + sway, gy - 12 + step, 4, 12);
+    ctx.fillRect(feetX + 2 + sway, gy - 12 + (step ? 0 : 3), 4, 12 - (step ? 0 : 3));
+
+    // Cloak
+    ctx.beginPath();
+    ctx.moveTo(feetX - 10 + sway, gy - 8);
+    ctx.lineTo(feetX + 10 + sway, gy - 8);
+    ctx.lineTo(feetX + 12 + sway, gy - 32);
+    ctx.lineTo(feetX - 12 + sway, gy - 32);
+    ctx.closePath();
+    ctx.fillStyle   = '#3d1a1a';
+    ctx.fill();
+    ctx.strokeStyle = '#5a2525';
+    ctx.lineWidth   = 0.8;
+    ctx.stroke();
+
+    // Chest
+    ctx.beginPath();
+    ctx.moveTo(feetX + sway,     gy - 42);
+    ctx.lineTo(feetX + 8 + sway, gy - 32);
+    ctx.lineTo(feetX + 6 + sway, gy - 22);
+    ctx.lineTo(feetX - 6 + sway, gy - 22);
+    ctx.lineTo(feetX - 8 + sway, gy - 32);
+    ctx.closePath();
+    ctx.fillStyle   = '#4a3020';
+    ctx.fill();
+    ctx.strokeStyle = '#6a4a30';
+    ctx.lineWidth   = 0.8;
+    ctx.stroke();
+
+    // Helmet
+    ctx.beginPath();
+    ctx.arc(feetX + sway, gy - 46, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#3a3020';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(feetX + sway,     gy - 56);
+    ctx.lineTo(feetX + 5 + sway, gy - 44);
+    ctx.lineTo(feetX - 5 + sway, gy - 44);
+    ctx.closePath();
+    ctx.fillStyle = '#4a4030';
+    ctx.fill();
+
+    // Visor glow
+    ctx.save();
+    ctx.shadowBlur  = 7;
+    ctx.shadowColor = '#ff8800';
+    ctx.strokeStyle = '#ffaa00';
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(feetX - 4 + sway, gy - 45);
+    ctx.lineTo(feetX + 4 + sway, gy - 45);
+    ctx.stroke();
+    ctx.restore();
+
+    // Sword
+    ctx.save();
+    ctx.strokeStyle = '#8a8aaa';
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(feetX + 11 + sway, gy - 16);
+    ctx.lineTo(feetX + 14 + sway, gy - 42);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(feetX + 7 + sway,  gy - 33);
+    ctx.lineTo(feetX + 18 + sway, gy - 33);
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(feetX + 12 + sway, gy - 16, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#7a7a9a';
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+}
+
+// ─── Skeleton ──────────────────────────────────────────────────────────────
+class Skeleton {
+  constructor(startX, startY) {
+    this.wx        = startX;
+    this.wy        = startY;
+    this.targetX   = startX;
+    this.targetY   = startY;
+    this.moving    = false;
+    this.facing    = Math.floor(Math.random() * 8);
+    this.animFrame = 0;
+    this.animTimer = 0;
+    this.idleTimer = Math.random() * 1500; // stagger wander starts
+  }
+
+  update(dt, map) {
+    if (!this.moving) {
+      this.idleTimer -= dt;
+      this.animFrame  = 0;
+      if (this.idleTimer <= 0) {
+        // Pick a random nearby floor tile
+        let placed = false;
+        for (let attempt = 0; attempt < 25; attempt++) {
+          const tx = Math.floor(this.wx) + Math.round((Math.random() - 0.5) * 12);
+          const ty = Math.floor(this.wy) + Math.round((Math.random() - 0.5) * 12);
+          if (map.getTile(tx, ty) === 'floor') {
+            this.targetX   = tx + 0.5;
+            this.targetY   = ty + 0.5;
+            this.moving    = true;
+            this.idleTimer = 800 + Math.random() * 2200;
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) this.idleTimer = 400;
+      }
+      return;
+    }
+
+    const dx   = this.targetX - this.wx;
+    const dy   = this.targetY - this.wy;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 0.1) {
+      this.wx     = this.targetX;
+      this.wy     = this.targetY;
+      this.moving = false;
+      return;
+    }
+
+    const speed = SKELETON_SPEED * dt / 16.67;
+    this.wx += (dx / dist) * speed;
+    this.wy += (dy / dist) * speed;
+
+    const angle = Math.atan2(dy, dx);
+    this.facing = Math.round(((angle + Math.PI) / (Math.PI * 2)) * 8) % 8;
+
+    this.animTimer += dt;
+    if (this.animTimer > 130) {
+      this.animFrame = (this.animFrame + 1) % 8;
+      this.animTimer = 0;
+    }
+  }
+
+  draw(ctx, feetX, feetY, elapsed) {
+    ctx.save();
+
+    const bob = this.moving
+      ? Math.sin(this.animFrame * Math.PI / 4) * 2
+      : Math.sin(elapsed * 0.0018) * 1;
+    const gy  = feetY + bob;
+
+    const flipX = this.facing >= 3 && this.facing <= 5;
+    if (flipX) {
+      ctx.translate(feetX, 0);
+      ctx.scale(-1, 1);
+      ctx.translate(-feetX, 0);
+    }
+
+    // Shadow
+    ctx.beginPath();
+    ctx.ellipse(feetX, gy + 3, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fill();
+
+    const bone = '#c2baa8';
+    const dark = '#7a7468';
+
+    // Leg bones — alternate step
+    const leftStep  = this.moving && this.animFrame % 2 === 0 ? 3 : 0;
+    const rightStep = this.moving && this.animFrame % 2 === 1 ? 3 : 0;
+    ctx.strokeStyle = bone;
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(feetX - 3, gy);
+    ctx.lineTo(feetX - 4, gy - 10 + leftStep);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(feetX + 3, gy);
+    ctx.lineTo(feetX + 4, gy - 10 + rightStep);
+    ctx.stroke();
+
+    // Pelvis bar
+    ctx.beginPath();
+    ctx.moveTo(feetX - 5, gy - 10);
+    ctx.lineTo(feetX + 5, gy - 10);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Spine
+    ctx.beginPath();
+    ctx.moveTo(feetX, gy - 10);
+    ctx.lineTo(feetX, gy - 30);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Ribs (3 pairs, curved)
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const ry = gy - 15 - i * 5;
+      ctx.beginPath();
+      ctx.moveTo(feetX, ry);
+      ctx.quadraticCurveTo(feetX - 8, ry - 1, feetX - 5, ry - 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(feetX, ry);
+      ctx.quadraticCurveTo(feetX + 8, ry - 1, feetX + 5, ry - 4);
+      ctx.stroke();
+    }
+
+    // Arms (swing when walking)
+    const armSwing = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 5 : 0;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(feetX - 3, gy - 28);
+    ctx.lineTo(feetX - 10, gy - 20 + armSwing);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(feetX + 3, gy - 28);
+    ctx.lineTo(feetX + 10, gy - 20 - armSwing);
+    ctx.stroke();
+
+    // Skull cranium
+    ctx.fillStyle = bone;
+    ctx.beginPath();
+    ctx.arc(feetX, gy - 37, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye sockets
+    ctx.fillStyle = '#0d0a08';
+    ctx.beginPath();
+    ctx.ellipse(feetX - 2.2, gy - 38, 1.7, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(feetX + 2.2, gy - 38, 1.7, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nose cavity
+    ctx.beginPath();
+    ctx.arc(feetX, gy - 34, 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jaw / teeth
+    ctx.strokeStyle = dark;
+    ctx.lineWidth   = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(feetX - 3.5, gy - 31);
+    ctx.lineTo(feetX + 3.5, gy - 31);
+    ctx.stroke();
+    for (let t = -3; t <= 3; t += 2) {
+      ctx.beginPath();
+      ctx.moveTo(feetX + t, gy - 31);
+      ctx.lineTo(feetX + t, gy - 33);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
+// ─── LightingLayer ─────────────────────────────────────────────────────────
+class LightingLayer {
+  constructor() {
+    this.offscreen = document.createElement('canvas');
+    this.offctx    = this.offscreen.getContext('2d');
+  }
+
+  resize(w, h) {
+    this.offscreen.width  = w;
+    this.offscreen.height = h;
+  }
+
+  render(ctx, player, cam, W, H) {
+    const oc = this.offctx;
+    const ow = this.offscreen.width;
+    const oh = this.offscreen.height;
+
+    oc.clearRect(0, 0, ow, oh);
+    oc.fillStyle = 'rgba(0,0,0,0.87)';
+    oc.fillRect(0, 0, ow, oh);
+    oc.globalCompositeOperation = 'destination-out';
+
+    const { sx: px, sy: py } = worldToScreen(player.wx, player.wy, cam.x, cam.y, W, H);
+    const g = oc.createRadialGradient(px, py - 22, 0, px, py - 22, LIGHT_RADIUS);
+    g.addColorStop(0,    'rgba(0,0,0,0.95)');
+    g.addColorStop(0.45, 'rgba(0,0,0,0.72)');
+    g.addColorStop(0.75, 'rgba(0,0,0,0.3)');
+    g.addColorStop(1,    'rgba(0,0,0,0)');
+    oc.fillStyle = g;
+    oc.beginPath();
+    oc.arc(px, py - 22, LIGHT_RADIUS, 0, Math.PI * 2);
+    oc.fill();
+
+    oc.globalCompositeOperation = 'source-over';
+    ctx.drawImage(this.offscreen, 0, 0);
+  }
+}
+
+// ─── InputHandler ──────────────────────────────────────────────────────────
+class InputHandler {
+  constructor(canvas, player, getCam, getSize) {
+    this.canvas    = canvas;
+    this.player    = player;
+    this.getCam    = getCam;
+    this.getSize   = getSize;
+
+    this.joystickActive   = false;
+    this.joystickPtrId    = null;
+    this.joystickOriginX  = 0;
+    this.joystickOriginY  = 0;
+    this.joystickCurrentX = 0;
+    this.joystickCurrentY = 0;
+
+    this._setupListeners();
+  }
+
+  _isJoystickZone(sx, sy) {
+    const { W, H } = this.getSize();
+    return sx < W * 0.32 && sy > H * 0.68;
+  }
+
+  _rawPos(e) {
+    const r   = this.canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    return {
+      rawX: (e.clientX - r.left) * (this.canvas.width  / r.width)  / dpr,
+      rawY: (e.clientY - r.top)  * (this.canvas.height / r.height) / dpr
+    };
+  }
+
+  _setupListeners() {
+    const c = this.canvas;
+    if ('onpointerdown' in window) {
+      c.addEventListener('pointerdown',   e => this._onDown(e));
+      c.addEventListener('pointermove',   e => this._onMove(e));
+      c.addEventListener('pointerup',     e => this._onUp(e));
+      c.addEventListener('pointercancel', e => this._onUp(e));
+    } else {
+      c.addEventListener('touchstart',  e => { e.preventDefault(); this._onDown(e.changedTouches[0]); }, { passive: false });
+      c.addEventListener('touchmove',   e => { e.preventDefault(); this._onMove(e.changedTouches[0]); }, { passive: false });
+      c.addEventListener('touchend',    e => { this._onUp(e.changedTouches[0]); });
+      c.addEventListener('mousedown',   e => this._onDown(e));
+      c.addEventListener('mousemove',   e => this._onMove(e));
+      c.addEventListener('mouseup',     e => this._onUp(e));
+    }
+  }
+
+  _onDown(e) {
+    const { rawX, rawY } = this._rawPos(e);
+
+    if (this._isJoystickZone(rawX, rawY) && this.joystickPtrId === null) {
+      this.joystickActive   = true;
+      this.joystickPtrId    = e.pointerId ?? e.identifier ?? 0;
+      this.joystickOriginX  = rawX;
+      this.joystickOriginY  = rawY;
+      this.joystickCurrentX = rawX;
+      this.joystickCurrentY = rawY;
+      if (this.canvas.setPointerCapture && e.pointerId != null)
+        this.canvas.setPointerCapture(e.pointerId);
+    } else {
+      const cam      = this.getCam();
+      const { W, H } = this.getSize();
+      const world    = screenToWorld(rawX, rawY, cam.x, cam.y, W, H);
+      this.player.setTarget(world.wx, world.wy);
+    }
+  }
+
+  _onMove(e) {
+    const id = e.pointerId ?? e.identifier ?? 0;
+    if (!this.joystickActive || id !== this.joystickPtrId) return;
+    const { rawX, rawY } = this._rawPos(e);
+    this.joystickCurrentX = rawX;
+    this.joystickCurrentY = rawY;
+  }
+
+  _onUp(e) {
+    const id = e.pointerId ?? e.identifier ?? 0;
+    if (id === this.joystickPtrId) {
+      this.joystickActive = false;
+      this.joystickPtrId  = null;
+      this.player.moving  = false;
+    }
+  }
+
+  getJoystickVector() {
+    if (!this.joystickActive) return null;
+    const dx   = this.joystickCurrentX - this.joystickOriginX;
+    const dy   = this.joystickCurrentY - this.joystickOriginY;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 5) return null;
+    const mag = Math.min(dist, JOYSTICK_RADIUS);
+    return {
+      dx:    (dx / dist) * (mag / JOYSTICK_RADIUS),
+      dy:    (dy / dist) * (mag / JOYSTICK_RADIUS),
+      angle: Math.atan2(dy, dx)
+    };
+  }
+
+  drawJoystick(ctx) {
+    if (!this.joystickActive) return;
+    ctx.save();
+    const ox = this.joystickOriginX;
+    const oy = this.joystickOriginY;
+
+    ctx.beginPath();
+    ctx.arc(ox, oy, JOYSTICK_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle   = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,100,0.45)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+
+    const dx   = this.joystickCurrentX - ox;
+    const dy   = this.joystickCurrentY - oy;
+    const dist = Math.hypot(dx, dy);
+    const kx   = ox + (dist > 0 ? (dx / dist) * Math.min(dist, JOYSTICK_RADIUS) : 0);
+    const ky   = oy + (dist > 0 ? (dy / dist) * Math.min(dist, JOYSTICK_RADIUS) : 0);
+
+    ctx.beginPath();
+    ctx.arc(kx, ky, JOYSTICK_KNOB, 0, Math.PI * 2);
+    ctx.fillStyle   = 'rgba(255,190,80,0.55)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,100,0.85)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+// ─── UIRenderer ────────────────────────────────────────────────────────────
+class UIRenderer {
+  render(ctx, W, H) {
+    const safe = 48;
+    const orbR = 34;
+    const orbY = H - safe - orbR;
+
+    this._drawOrb(ctx, W * 0.11, orbY, orbR, '#7a0000', '#bb1500', 0.82, 'Life');
+    this._drawOrb(ctx, W * 0.89, orbY, orbR, '#00006a', '#1a3ab8', 0.62, 'Mana');
+
+    const bW = W * 0.38;
+    const bX = W / 2 - bW / 2;
+    const bY = H - safe + 14;
+    ctx.save();
+    ctx.fillStyle = '#2a1a00';
+    ctx.fillRect(bX, bY, bW, 5);
+    ctx.fillStyle = '#bb7a00';
+    ctx.fillRect(bX, bY, bW * 0.28, 5);
+    ctx.strokeStyle = '#5a3a00';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bX, bY, bW, 5);
+    ctx.restore();
+  }
+
+  _drawOrb(ctx, cx, cy, r, colorDark, colorBright, fill, label) {
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0505';
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.clip();
+    const fillY = cy + r - r * 2 * fill;
+    const g = ctx.createLinearGradient(cx, cy + r, cx, cy - r);
+    g.addColorStop(0, colorDark);
+    g.addColorStop(1, colorBright);
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - r, fillY, r * 2, cy + r - fillY + 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(cx - r, fillY - 1, r * 2, 3);
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = '#7a4a22';
+    ctx.lineWidth   = 3;
+    ctx.stroke();
+    ctx.strokeStyle = '#3a1a08';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#aa8855';
+    ctx.font      = 'bold 11px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, cx, cy + r + 14);
+
+    for (const [dx, dy] of [[-0.7,-0.7],[0.7,-0.7],[-0.7,0.7],[0.7,0.7]]) {
+      ctx.save();
+      ctx.translate(cx + dx * r, cy + dy * r);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = '#7a4820';
+      ctx.fillRect(-3, -3, 6, 6);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+}
+
+// ─── Game ──────────────────────────────────────────────────────────────────
+class Game {
+  constructor() {
+    this.canvas   = document.getElementById('gameCanvas');
+    this.ctx      = this.canvas.getContext('2d');
+    this.W        = 0;
+    this.H        = 0;
+    this.cam      = { x: 0, y: 0 };
+    this.elapsed  = 0;
+  }
+
+  init() {
+    this.map      = new DungeonMap();
+    this.player   = new Player(9, 8);
+    this.lighting = new LightingLayer();
+    this.ui       = new UIRenderer();
+    this.input    = new InputHandler(
+      this.canvas,
+      this.player,
+      () => this.cam,
+      () => ({ W: this.W, H: this.H })
+    );
+
+    // Scatter skeletons across random floor tiles (not near player spawn)
+    this.skeletons = [];
+    const floorTiles = [];
+    for (let ty = 0; ty < MAP_H; ty++)
+      for (let tx = 0; tx < MAP_W; tx++)
+        if (this.map.getTile(tx, ty) === 'floor' &&
+            Math.hypot(tx - 9, ty - 8) > 6)
+          floorTiles.push({ tx, ty });
+
+    for (let i = floorTiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [floorTiles[i], floorTiles[j]] = [floorTiles[j], floorTiles[i]];
+    }
+
+    for (let i = 0; i < Math.min(SKELETON_COUNT, floorTiles.length); i++) {
+      const t = floorTiles[i];
+      this.skeletons.push(new Skeleton(t.tx + 0.5, t.ty + 0.5));
+    }
+
+    window.addEventListener('resize', () => this.resize());
+    this.resize();
+  }
+
+  resize() {
+    const dpr             = window.devicePixelRatio || 1;
+    this.W                = window.innerWidth;
+    this.H                = window.innerHeight;
+    this.canvas.width     = this.W * dpr;
+    this.canvas.height    = this.H * dpr;
+    this.canvas.style.width  = this.W + 'px';
+    this.canvas.style.height = this.H + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.lighting.resize(this.W, this.H);
+  }
+
+  update(dt) {
+    this.elapsed += dt;
+
+    const jv = this.input.getJoystickVector();
+    if (jv) {
+      const speed = PLAYER_SPEED * dt / 16.67;
+      this.player.wx    += (jv.dx + jv.dy) * speed * 0.72;
+      this.player.wy    += (jv.dy - jv.dx) * speed * 0.72;
+      this.player.moving = true;
+      this.player.facing = Math.round(((jv.angle + Math.PI) / (Math.PI * 2)) * 8) % 8;
+      this.player.animTimer += dt;
+      if (this.player.animTimer > 95) {
+        this.player.animFrame = (this.player.animFrame + 1) % 8;
+        this.player.animTimer = 0;
+      }
+    } else {
+      this.player.update(dt);
+    }
+
+    this.player.wx = Math.max(1.5, Math.min(MAP_W - 2.5, this.player.wx));
+    this.player.wy = Math.max(1.5, Math.min(MAP_H - 2.5, this.player.wy));
+
+    this.skeletons.forEach(sk => sk.update(dt, this.map));
+
+    const { sx, sy } = worldToScreen(this.player.wx, this.player.wy, 0, 0, 0, 0);
+    this.cam.x = sx;
+    this.cam.y = sy;
+  }
+
+  render() {
+    const ctx      = this.ctx;
+    const { W, H } = this;
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    const entities = [this.player, ...this.skeletons];
+    this.map.render(ctx, this.cam, W, H, entities, this.elapsed);
+
+    this.lighting.render(ctx, this.player, this.cam, W, H);
+
+    this.ui.render(ctx, W, H);
+    this.input.drawJoystick(ctx);
+  }
+
+  start() {
+    let last = 0;
+    const loop = ts => {
+      const dt = Math.min(ts - last, 50);
+      last = ts;
+      this.update(dt);
+      this.render();
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+}
+</script>
+
+<!-- Block 3: Bootstrap -->
+<script>
+const game = new Game();
+game.init();
+game.start();
+</script>
 </body>
 </html>
