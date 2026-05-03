@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>House of Kay — Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#0d1117;min-height:100vh;font-family:'Share Tech Mono',monospace;}
+
+    .scene{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    .grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(255,61,138,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,61,138,0.07) 1px,transparent 1px);background-size:32px 32px;}
+
+    .corner{position:absolute;width:48px;height:48px;}
+    .corner svg{width:100%;height:100%;}
+    .c-tl{top:18px;left:18px;}.c-tr{top:18px;right:18px;transform:scaleX(-1);}
+    .c-bl{bottom:18px;left:18px;transform:scaleY(-1);}.c-br{bottom:18px;right:18px;transform:scale(-1,-1);}
+    .corner-pink svg path{stroke:#ff3d8a;}
+    .corner-dim svg path{stroke:#ff3d8a44;}
+
+    /* ─── Rainbow border via animated conic-gradient wrapper ── */
+    @property --angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+    @keyframes rainbow-spin { to { --angle: 360deg; } }
+
+    .panel-wrapper{
+      padding: 2px;
+      border-radius: 20px;
+      background: conic-gradient(from var(--angle),
+        #ff3d8a, #ff8800, #f0c040, #44dd88, #00dcff, #9955ff, #ff3d8a);
+      animation: rainbow-spin 6s linear infinite;
+      box-shadow: 0 0 40px #ff3d8a22, 0 0 80px #00dcff11;
+      position: relative;
+      z-index: 10;
+    }
+
+    .panel{
+      width:320px;
+      background:#0e080c;
+      border:none;
+      border-radius:18px;
+      overflow:hidden;
+      position:relative;
+    }
+
+    .panel-top-bar{background:#1a0812;border-bottom:2px solid #ff3d8a44;padding:10px 14px;display:flex;align-items:center;justify-content:flex-end;gap:6px;}
+    .traffic{width:10px;height:10px;border-radius:50%;}
+    .panel-body{padding:28px 20px 24px;}
+
+    .icon-wrap{text-align:center;margin-bottom:10px;}
+    .icon-wrap svg{filter:drop-shadow(0 0 10px #ff3d8aaa);}
+
+    .prompt-label{text-align:center;font-size:11px;letter-spacing:0.22em;color:#ff3d8a;margin-bottom:4px;}
+    .prompt-sub{text-align:center;font-size:9px;letter-spacing:0.14em;color:#ff3d8a66;margin-bottom:26px;}
+
+    .divider{border:none;height:1px;background:linear-gradient(90deg,transparent,#ff3d8a33,transparent);margin:0 0 22px;}
+
+    .pills{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+    /* ─── Base pill ─────────────────────────────────────────── */
+    .pill{
+      padding:18px 12px;
+      background:#0e080c;
+      border:2px solid;
+      border-radius:10px;
+      font-family:'Share Tech Mono',monospace;
+      font-size:18px;
+      letter-spacing:0.2em;
+      text-align:center;
+      cursor:pointer;
+      transition:all 0.18s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    .pill::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,transparent 60%);pointer-events:none;}
+    .pill::after{content:'';position:absolute;left:15%;right:15%;top:0;height:1px;opacity:0.5;pointer-events:none;}
+    .pill:active{transform:scale(0.95);}
+
+    /* ─── Kay — pink ────────────────────────────────────────── */
+    .pill-pink{color:#ff3d8a;border-color:#ff3d8a55;box-shadow:inset 0 0 12px #ff3d8a08;}
+    .pill-pink::after{background:linear-gradient(90deg,transparent,#ff3d8a,transparent);}
+    .pill-pink:hover{
+      background:#200810;
+      border-color:#ff3d8a;
+      color:#ff6aaa;
+      box-shadow:0 0 22px #ff3d8a55,0 0 8px #ff3d8a33,inset 0 0 18px #ff3d8a18;
+      transform:translateY(-2px);
+    }
+
+    /* ─── Danny — green ─────────────────────────────────────── */
+    .pill-green{color:#44dd88;border-color:#44dd8855;box-shadow:inset 0 0 12px #44dd8808;}
+    .pill-green::after{background:linear-gradient(90deg,transparent,#44dd88,transparent);}
+    .pill-green:hover{
+      background:#081a10;
+      border-color:#44dd88;
+      color:#66ffaa;
+      box-shadow:0 0 22px #44dd8855,0 0 8px #44dd8833,inset 0 0 18px #44dd8818;
+      transform:translateY(-2px);
+    }
+
+    /* ─── Jenson — cyan ─────────────────────────────────────── */
+    .pill-cyan{color:#00dcff;border-color:#00dcff55;box-shadow:inset 0 0 12px #00dcff08;}
+    .pill-cyan::after{background:linear-gradient(90deg,transparent,#00dcff,transparent);}
+    .pill-cyan:hover{
+      background:#08181a;
+      border-color:#00dcff;
+      color:#44eeff;
+      box-shadow:0 0 22px #00dcff55,0 0 8px #00dcff33,inset 0 0 18px #00dcff18;
+      transform:translateY(-2px);
+    }
+
+    /* ─── Roux — gold ───────────────────────────────────────── */
+    .pill-gold{color:#f0c040;border-color:#f0c04055;box-shadow:inset 0 0 12px #f0c04008;}
+    .pill-gold::after{background:linear-gradient(90deg,transparent,#f0c040,transparent);}
+    .pill-gold:hover{
+      background:#1a1400;
+      border-color:#f0c040;
+      color:#ffd860;
+      box-shadow:0 0 22px #f0c04055,0 0 8px #f0c04033,inset 0 0 18px #f0c04018;
+      transform:translateY(-2px);
+    }
+
+    .sys-id{text-align:center;font-size:9px;color:#ff3d8a33;letter-spacing:0.14em;margin-top:20px;display:flex;align-items:center;justify-content:center;gap:6px;}
+    .sys-dot{width:5px;height:5px;border-radius:50%;background:#ff3d8a55;animation:blink 2s infinite;}
+
+    .scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(transparent,#ff3d8a1a,transparent);animation:scanline 3.2s linear infinite;pointer-events:none;z-index:20;}
+
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+    @keyframes scanline{0%{top:-10%;}100%{top:110%;}}
+  </style>
+</head>
+<body>
+
+<div class="scene">
+  <div class="grid-bg"></div>
+  <div class="corner c-tl corner-pink"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
+  <div class="corner c-tr corner-pink"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
+  <div class="corner c-bl corner-dim"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
+  <div class="corner c-br corner-dim"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
+
+  <div class="panel-wrapper">
+    <div class="panel">
+      <div class="scanline"></div>
+      <div class="panel-top-bar">
+        <div class="traffic" style="background:#ff5f57;"></div>
+        <div class="traffic" style="background:#febc2e;"></div>
+        <div class="traffic" style="background:#28c840;"></div>
+      </div>
+      <div class="panel-body">
+
+        <div class="icon-wrap">
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+            <rect x="8" y="14" width="36" height="30" rx="4" fill="none" stroke="#ff3d8a" stroke-width="2.5"/>
+            <line x1="18" y1="10" x2="18" y2="18" stroke="#ff3d8a" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="34" y1="10" x2="34" y2="18" stroke="#ff3d8a" stroke-width="2.5" stroke-linecap="round"/>
+            <rect x="8" y="14" width="36" height="10" rx="2" fill="#ff3d8a22"/>
+            <circle cx="19" cy="32" r="2" fill="#ff3d8a"/>
+            <circle cx="26" cy="32" r="2" fill="#f0c040"/>
+            <circle cx="33" cy="32" r="2" fill="#00dcff"/>
+            <circle cx="19" cy="39" r="2" fill="#44dd88"/>
+            <circle cx="26" cy="39" r="2" fill="#ff3d8a"/>
+            <circle cx="40" cy="12" r="3.5" fill="#ff3d8a" stroke="#cc1a5e" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <div class="prompt-label">WHO ARE YOU?</div>
+        <div class="prompt-sub">SELECT YOUR PROFILE TO CONTINUE</div>
+        <div class="divider"></div>
+
+        <div class="pills">
+          <button class="pill pill-pink"  onclick="selectUser('Kay')">KAY</button>
+          <button class="pill pill-green" onclick="selectUser('Danny')">DANNY</button>
+          <button class="pill pill-cyan"  onclick="selectUser('Jenson')">JENSON</button>
+          <button class="pill pill-gold"  onclick="selectUser('Roux')">ROUX</button>
+        </div>
+
+        <div class="sys-id">SYS.ID: 3687 <span class="sys-dot"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function selectUser(name) {
+    // TODO: hook up to Supabase auth/profile lookup
+    console.log('Selected:', name);
+  }
+</script>
+</body>
+</html>

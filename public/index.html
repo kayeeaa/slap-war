@@ -10,12 +10,9 @@
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#0d1117;min-height:100vh;font-family:'Share Tech Mono',monospace;}
 
-    /* ─── Shared scene ──────────────────────────────────────── */
     .scene{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;}
     .grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,220,255,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(0,220,255,0.07) 1px,transparent 1px);background-size:32px 32px;}
-    .grid-gold{background-image:linear-gradient(rgba(240,192,64,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(240,192,64,0.08) 1px,transparent 1px);}
 
-    /* ─── Corners ───────────────────────────────────────────── */
     .corner{position:absolute;width:48px;height:48px;}
     .corner svg{width:100%;height:100%;}
     .c-tl{top:18px;left:18px;}.c-tr{top:18px;right:18px;transform:scaleX(-1);}
@@ -23,13 +20,6 @@
     .corner-cyan svg path{stroke:#00dcff;}
     .corner-gold svg path{stroke:#f0c040;}
 
-    /* ─── Scene transitions ─────────────────────────────────── */
-    #pinScene{opacity:1;transition:opacity 0.45s ease;z-index:2;}
-    #pinScene.hidden{opacity:0;pointer-events:none;}
-    #hubScene{opacity:0;pointer-events:none;transition:opacity 0.45s ease 0.25s;z-index:1;}
-    #hubScene.visible{opacity:1;pointer-events:auto;}
-
-    /* ─── Phone panel (PIN screen) ──────────────────────────── */
     .phone{width:310px;background:#0a0e14;border:2px solid #00dcff;border-radius:18px;box-shadow:0 0 30px #00dcff33,inset 0 0 20px #00dcff08;position:relative;z-index:10;overflow:hidden;}
     .phone-top-bar{background:#0d1420;border-bottom:2px solid #f0c040;padding:10px 14px;display:flex;align-items:center;justify-content:flex-end;gap:6px;}
     .traffic{width:10px;height:10px;border-radius:50%;}
@@ -53,33 +43,8 @@
     .sys-dot{width:5px;height:5px;border-radius:50%;background:#00dcff66;animation:blink 2s infinite;}
     .err-msg{text-align:center;font-size:10px;letter-spacing:0.1em;min-height:16px;margin-top:6px;font-family:'Share Tech Mono',monospace;}
 
-    /* ─── Hub panel ─────────────────────────────────────────── */
-    .hub-panel{width:320px;background:#0e0c07;border:2px solid #f0c040;border-radius:18px;box-shadow:0 0 50px #f0c04044,0 0 100px #f0c04011,inset 0 0 24px #f0c04008;position:relative;z-index:10;overflow:hidden;}
-    .hub-top-bar{background:#1a1200;border-bottom:2px solid #00dcff55;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;}
-    .hub-traffic{display:flex;gap:6px;}
-    .hub-title{font-size:10px;letter-spacing:0.2em;color:#f0c040;opacity:0.9;}
-    .hub-body{padding:28px 22px 22px;}
-    .hub-crest{text-align:center;margin-bottom:12px;}
-    .hub-crest svg{filter:drop-shadow(0 0 14px #f0c040bb);}
-    .hub-heading{text-align:center;font-size:13px;letter-spacing:0.22em;color:#f0c040;margin-bottom:4px;}
-    .hub-sub{text-align:center;font-size:9px;letter-spacing:0.16em;color:#00dcff;opacity:0.65;margin-bottom:26px;}
-    .hub-divider{border:none;height:1px;background:linear-gradient(90deg,transparent,#f0c04040,transparent);margin:0 0 24px;}
-    .game-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:20px 0 16px;background:linear-gradient(180deg,#1e1600 0%,#120e00 100%);border:2px solid #f0c040;border-radius:10px;color:#f0c040;font-family:'Share Tech Mono',monospace;cursor:pointer;text-decoration:none;box-shadow:0 0 22px #f0c04033,inset 0 0 14px #f0c04008;transition:all 0.15s;position:relative;overflow:hidden;}
-    .game-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(240,192,64,0.08) 0%,transparent 55%);pointer-events:none;}
-    .game-btn::after{content:'';position:absolute;left:10%;right:10%;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(240,192,64,0.5),transparent);}
-    .game-btn:hover{background:linear-gradient(180deg,#2a1e00 0%,#1a1200 100%);box-shadow:0 0 40px #f0c04066,inset 0 0 20px #f0c04018;border-color:#ffd860;}
-    .game-btn:hover .btn-label{color:#ffd860;text-shadow:0 0 20px #f0c040cc;}
-    .game-btn:active{transform:scale(0.97);}
-    .btn-label{font-size:22px;letter-spacing:0.3em;text-shadow:0 0 12px #f0c04066;}
-    .btn-sub{font-size:9px;letter-spacing:0.18em;color:#f0c04077;margin-top:6px;}
-    .hub-sys{text-align:center;font-size:9px;color:#f0c04044;letter-spacing:0.14em;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:6px;}
-    .hub-dot{width:5px;height:5px;border-radius:50%;background:#f0c04066;animation:blink 2.4s infinite;}
-
-    /* ─── Scanline ──────────────────────────────────────────── */
     .scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(transparent,#00dcff22,transparent);animation:scanline 3s linear infinite;pointer-events:none;z-index:20;}
-    .scanline-gold{background:linear-gradient(transparent,#f0c04022,transparent);animation-duration:3.5s;}
 
-    /* ─── Keyframes ─────────────────────────────────────────── */
     @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
     @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-7px);}40%{transform:translateX(7px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
     @keyframes scanline{0%{top:-10%;}100%{top:110%;}}
@@ -87,8 +52,7 @@
 </head>
 <body>
 
-<!-- ═══════════ PIN SCREEN ═══════════ -->
-<div class="scene" id="pinScene">
+<div class="scene">
   <div class="grid-bg"></div>
   <div class="corner c-tl corner-cyan"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
   <div class="corner c-tr corner-cyan"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
@@ -124,61 +88,6 @@
       <div class="bottom-row" id="bottomRow"></div>
       <div class="err-msg" id="errMsg"></div>
       <div class="sys-id">SYS.ID: 3687 <span class="sys-dot"></span></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════ HUB SCREEN ═══════════ -->
-<div class="scene" id="hubScene">
-  <div class="grid-bg grid-gold"></div>
-  <div class="corner c-tl corner-gold"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
-  <div class="corner c-tr corner-gold"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
-  <div class="corner c-bl corner-cyan"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
-  <div class="corner c-br corner-cyan"><svg viewBox="0 0 48 48" fill="none"><path d="M2 46 L2 2 L46 2" stroke-width="2.5" stroke-linecap="square"/></svg></div>
-
-  <div class="hub-panel">
-    <div class="scanline scanline-gold"></div>
-    <div class="hub-top-bar">
-      <div class="hub-traffic">
-        <div class="traffic" style="background:#ff5f57;"></div>
-        <div class="traffic" style="background:#febc2e;"></div>
-        <div class="traffic" style="background:#28c840;"></div>
-      </div>
-      <div class="hub-title">HOUSE OF KAY</div>
-    </div>
-    <div class="hub-body">
-      <div class="hub-crest">
-        <svg width="62" height="56" viewBox="0 0 62 56" fill="none">
-          <!-- crown body -->
-          <path d="M6 40 L6 20 L18 33 L31 8 L44 33 L56 20 L56 40 Z" fill="#f0c040" stroke="#c89a20" stroke-width="1.5" stroke-linejoin="round"/>
-          <rect x="6" y="40" width="50" height="10" rx="3" fill="#f0c040" stroke="#c89a20" stroke-width="1.5"/>
-          <!-- highlight on crown -->
-          <path d="M6 40 L6 20 L18 33 L31 8 L44 33 L56 20 L56 40 Z" fill="url(#crownShine)" stroke="none"/>
-          <!-- centre jewel (cyan) -->
-          <circle cx="31" cy="28" r="5" fill="#00dcff" stroke="#0099bb" stroke-width="1.2"/>
-          <circle cx="31" cy="27" r="2" fill="rgba(255,255,255,0.4)"/>
-          <!-- side jewels -->
-          <circle cx="16" cy="36" r="3" fill="#ff4466" stroke="#cc2244" stroke-width="0.8"/>
-          <circle cx="46" cy="36" r="3" fill="#44ddaa" stroke="#22aa88" stroke-width="0.8"/>
-          <!-- sheen lines -->
-          <path d="M11 22 L15 18" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M51 22 L47 18" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" stroke-linecap="round"/>
-          <defs>
-            <linearGradient id="crownShine" x1="31" y1="8" x2="31" y2="40" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="rgba(255,255,255,0.18)"/>
-              <stop offset="1" stop-color="rgba(255,255,255,0)"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <div class="hub-heading">ACCESS GRANTED</div>
-      <div class="hub-sub">WELCOME TO THE INNER SANCTUM</div>
-      <div class="hub-divider"></div>
-      <a class="game-btn" href="/slap-war">
-        <span class="btn-label">SLAP WAR</span>
-        <span class="btn-sub">[ ENTER THE ARENA ]</span>
-      </a>
-      <div class="hub-sys">SYS.ID: 3687 <span class="hub-dot"></span></div>
     </div>
   </div>
 </div>
@@ -225,10 +134,7 @@
       err.style.color = "#00dcff";
       err.textContent = "// ACCESS GRANTED";
       entered = ""; updateDots();
-      setTimeout(() => {
-        document.getElementById("pinScene").classList.add("hidden");
-        document.getElementById("hubScene").classList.add("visible");
-      }, 550);
+      setTimeout(() => { window.location.href = "/menu/"; }, 550);
     } else {
       err.style.color = "#ff3355";
       err.textContent = "// ACCESS DENIED — RETRY";
