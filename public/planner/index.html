@@ -20,7 +20,6 @@
     .corner-pink svg path{stroke:#ff3d8a;}
     .corner-dim svg path{stroke:#ff3d8a44;}
 
-    /* ─── Rainbow border via animated conic-gradient wrapper ── */
     @property --angle {
       syntax: '<angle>';
       initial-value: 0deg;
@@ -62,7 +61,6 @@
 
     .pills{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
-    /* ─── Base pill ─────────────────────────────────────────── */
     .pill{
       padding:18px 12px;
       background:#0e080c;
@@ -80,54 +78,27 @@
     .pill::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,transparent 60%);pointer-events:none;}
     .pill::after{content:'';position:absolute;left:15%;right:15%;top:0;height:1px;opacity:0.5;pointer-events:none;}
     .pill:active{transform:scale(0.95);}
+    .pill:disabled{opacity:0.4;cursor:not-allowed;}
 
-    /* ─── Kay — pink ────────────────────────────────────────── */
     .pill-pink{color:#ff3d8a;border-color:#ff3d8a55;box-shadow:inset 0 0 12px #ff3d8a08;}
     .pill-pink::after{background:linear-gradient(90deg,transparent,#ff3d8a,transparent);}
-    .pill-pink:hover{
-      background:#200810;
-      border-color:#ff3d8a;
-      color:#ff6aaa;
-      box-shadow:0 0 22px #ff3d8a55,0 0 8px #ff3d8a33,inset 0 0 18px #ff3d8a18;
-      transform:translateY(-2px);
-    }
+    .pill-pink:hover:not(:disabled){background:#200810;border-color:#ff3d8a;color:#ff6aaa;box-shadow:0 0 22px #ff3d8a55,0 0 8px #ff3d8a33,inset 0 0 18px #ff3d8a18;transform:translateY(-2px);}
 
-    /* ─── Danny — green ─────────────────────────────────────── */
     .pill-green{color:#44dd88;border-color:#44dd8855;box-shadow:inset 0 0 12px #44dd8808;}
     .pill-green::after{background:linear-gradient(90deg,transparent,#44dd88,transparent);}
-    .pill-green:hover{
-      background:#081a10;
-      border-color:#44dd88;
-      color:#66ffaa;
-      box-shadow:0 0 22px #44dd8855,0 0 8px #44dd8833,inset 0 0 18px #44dd8818;
-      transform:translateY(-2px);
-    }
+    .pill-green:hover:not(:disabled){background:#081a10;border-color:#44dd88;color:#66ffaa;box-shadow:0 0 22px #44dd8855,0 0 8px #44dd8833,inset 0 0 18px #44dd8818;transform:translateY(-2px);}
 
-    /* ─── Jenson — cyan ─────────────────────────────────────── */
     .pill-cyan{color:#00dcff;border-color:#00dcff55;box-shadow:inset 0 0 12px #00dcff08;}
     .pill-cyan::after{background:linear-gradient(90deg,transparent,#00dcff,transparent);}
-    .pill-cyan:hover{
-      background:#08181a;
-      border-color:#00dcff;
-      color:#44eeff;
-      box-shadow:0 0 22px #00dcff55,0 0 8px #00dcff33,inset 0 0 18px #00dcff18;
-      transform:translateY(-2px);
-    }
+    .pill-cyan:hover:not(:disabled){background:#08181a;border-color:#00dcff;color:#44eeff;box-shadow:0 0 22px #00dcff55,0 0 8px #00dcff33,inset 0 0 18px #00dcff18;transform:translateY(-2px);}
 
-    /* ─── Roux — gold ───────────────────────────────────────── */
     .pill-gold{color:#f0c040;border-color:#f0c04055;box-shadow:inset 0 0 12px #f0c04008;}
     .pill-gold::after{background:linear-gradient(90deg,transparent,#f0c040,transparent);}
-    .pill-gold:hover{
-      background:#1a1400;
-      border-color:#f0c040;
-      color:#ffd860;
-      box-shadow:0 0 22px #f0c04055,0 0 8px #f0c04033,inset 0 0 18px #f0c04018;
-      transform:translateY(-2px);
-    }
+    .pill-gold:hover:not(:disabled){background:#1a1400;border-color:#f0c040;color:#ffd860;box-shadow:0 0 22px #f0c04055,0 0 8px #f0c04033,inset 0 0 18px #f0c04018;transform:translateY(-2px);}
 
-    .sys-id{text-align:center;font-size:9px;color:#ff3d8a33;letter-spacing:0.14em;margin-top:20px;display:flex;align-items:center;justify-content:center;gap:6px;}
+    .err-msg{text-align:center;font-size:10px;letter-spacing:0.1em;min-height:16px;margin-top:14px;font-family:'Share Tech Mono',monospace;color:#ff3355;}
+    .sys-id{text-align:center;font-size:9px;color:#ff3d8a33;letter-spacing:0.14em;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;}
     .sys-dot{width:5px;height:5px;border-radius:50%;background:#ff3d8a55;animation:blink 2s infinite;}
-
     .scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(transparent,#ff3d8a1a,transparent);animation:scanline 3.2s linear infinite;pointer-events:none;z-index:20;}
 
     @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
@@ -173,22 +144,55 @@
         <div class="divider"></div>
 
         <div class="pills">
-          <button class="pill pill-pink"  onclick="selectUser('Kay')">KAY</button>
-          <button class="pill pill-green" onclick="selectUser('Danny')">DANNY</button>
-          <button class="pill pill-cyan"  onclick="selectUser('Jenson')">JENSON</button>
-          <button class="pill pill-gold"  onclick="selectUser('Roux')">ROUX</button>
+          <button class="pill pill-pink"  onclick="selectUser('Kay','#ff3d8a','pink')"  id="btn-Kay">KAY</button>
+          <button class="pill pill-green" onclick="selectUser('Danny','#44dd88','green')" id="btn-Danny">DANNY</button>
+          <button class="pill pill-cyan"  onclick="selectUser('Jenson','#00dcff','cyan')" id="btn-Jenson">JENSON</button>
+          <button class="pill pill-gold"  onclick="selectUser('Roux','#f0c040','gold')"  id="btn-Roux">ROUX</button>
         </div>
 
+        <div class="err-msg" id="errMsg"></div>
         <div class="sys-id">SYS.ID: 3687 <span class="sys-dot"></span></div>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/js/supabase-config.js"></script>
+<script src="/js/auth.js"></script>
 <script>
-  function selectUser(name) {
-    // TODO: hook up to Supabase auth/profile lookup
-    console.log('Selected:', name);
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function setLoading(loading) {
+    document.querySelectorAll('.pill').forEach(b => b.disabled = loading);
+  }
+
+  async function selectUser(name, color, colorName) {
+    setLoading(true);
+    document.getElementById('errMsg').textContent = '';
+
+    try {
+      const { data, error } = await db
+        .from('profiles')
+        .select('id,name,color,color_name,pin_hash')
+        .eq('name', name)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        sessionStorage.setItem('pending_name', name);
+        sessionStorage.setItem('pending_color', color);
+        sessionStorage.setItem('pending_color_name', colorName);
+        window.location.href = '/planner/create/';
+      } else {
+        sessionStorage.setItem('pending_profile', JSON.stringify(data));
+        window.location.href = '/planner/pin/';
+      }
+    } catch (err) {
+      document.getElementById('errMsg').textContent = '// CONNECTION ERROR — CHECK CONFIG';
+      setLoading(false);
+    }
   }
 </script>
 </body>
