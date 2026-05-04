@@ -30,7 +30,8 @@ const TILE_H          = 32;
 const WALL_H          = 22;
 const MAP_W           = 42;
 const MAP_H           = 42;
-const PLAYER_SPEED    = 4.2;
+const PLAYER_SPEED    = 1;
+const DIRECT_SPEED    = 0.4;
 const SKELETON_COUNT  = 8;
 const SKELETON_SPEED  = 0.95;
 const LIGHT_RADIUS    = 195;
@@ -105,7 +106,54 @@ class DungeonMap {
     return this.tiles[ty][tx];
   }
 
+  renderBackground(ctx, cam, W, H) {
+    const PAD = 6;
+    for (let ty = -PAD; ty < MAP_H + PAD; ty++) {
+      for (let tx = -PAD; tx < MAP_W + PAD; tx++) {
+        if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H) continue;
+        const { sx, sy } = worldToScreen(tx, ty, cam.x, cam.y, W, H);
+        if (sx < -TILE_W * 2 || sx > W + TILE_W * 2 ||
+            sy < -TILE_H * 2 || sy > H + TILE_H * 3) continue;
+        this._drawVoidTile(ctx, sx, sy);
+      }
+    }
+  }
+
+  _drawVoidTile(ctx, sx, sy) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(sx,              sy);
+    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx,              sy + TILE_H);
+    ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
+    ctx.closePath();
+    ctx.fillStyle   = '#0e0b09';
+    ctx.fill();
+    ctx.strokeStyle = '#181310';
+    ctx.lineWidth   = 0.5;
+    ctx.stroke();
+    // side faces to fill the void
+    ctx.beginPath();
+    ctx.moveTo(sx - TILE_W / 2, sy + TILE_H / 2);
+    ctx.lineTo(sx,               sy + TILE_H);
+    ctx.lineTo(sx,               sy + TILE_H + WALL_H * 2);
+    ctx.lineTo(sx - TILE_W / 2,  sy + TILE_H / 2 + WALL_H * 2);
+    ctx.closePath();
+    ctx.fillStyle = '#080604';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(sx,               sy + TILE_H);
+    ctx.lineTo(sx + TILE_W / 2,  sy + TILE_H / 2);
+    ctx.lineTo(sx + TILE_W / 2,  sy + TILE_H / 2 + WALL_H * 2);
+    ctx.lineTo(sx,               sy + TILE_H + WALL_H * 2);
+    ctx.closePath();
+    ctx.fillStyle = '#060503';
+    ctx.fill();
+    ctx.restore();
+  }
+
   render(ctx, cam, W, H, entities, elapsed) {
+    // Pass 1: all tile tops
     for (let ty = 0; ty < MAP_H; ty++) {
       for (let tx = 0; tx < MAP_W; tx++) {
         const { sx, sy } = worldToScreen(tx, ty, cam.x, cam.y, W, H);
@@ -113,15 +161,29 @@ class DungeonMap {
             sy < -TILE_H * 2 || sy > H + TILE_H * 3) continue;
         const tile = this.tiles[ty][tx];
         if (tile === 'floor') this._drawFloor(ctx, sx, sy);
-        else                  this._drawWall(ctx, sx, sy);
-      }
-      for (const entity of entities) {
-        if (Math.floor(entity.wy) === ty) {
-          const { sx, sy } = worldToScreen(entity.wx, entity.wy, cam.x, cam.y, W, H);
-          entity.draw(ctx, sx, sy + TILE_H / 2, elapsed);
-        }
+        else                  this._drawWallTop(ctx, sx, sy);
       }
     }
+
+    // Pass 2: wall sides + entities depth-sorted together
+    const drawables = [];
+    for (let ty = 0; ty < MAP_H; ty++) {
+      for (let tx = 0; tx < MAP_W; tx++) {
+        if (this.tiles[ty][tx] !== 'wall') continue;
+        const { sx, sy } = worldToScreen(tx, ty, cam.x, cam.y, W, H);
+        if (sx < -TILE_W * 2 || sx > W + TILE_W * 2 ||
+            sy < -TILE_H * 2 || sy > H + TILE_H * 3) continue;
+        const capSx = sx, capSy = sy;
+        drawables.push({ depth: tx + ty, fn: () => this._drawWallSides(ctx, capSx, capSy) });
+      }
+    }
+    for (const entity of entities) {
+      const { sx, sy } = worldToScreen(entity.wx, entity.wy, cam.x, cam.y, W, H);
+      const capSx = sx, capSy = sy;
+      drawables.push({ depth: entity.wx + entity.wy, fn: () => entity.draw(ctx, capSx, capSy + TILE_H / 2, elapsed) });
+    }
+    drawables.sort((a, b) => a.depth - b.depth);
+    for (const d of drawables) d.fn();
   }
 
   _drawFloor(ctx, sx, sy) {
@@ -140,7 +202,7 @@ class DungeonMap {
     ctx.restore();
   }
 
-  _drawWall(ctx, sx, sy) {
+  _drawWallTop(ctx, sx, sy) {
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(sx,              sy);
@@ -153,6 +215,11 @@ class DungeonMap {
     ctx.strokeStyle = '#3d3830';
     ctx.lineWidth   = 0.5;
     ctx.stroke();
+    ctx.restore();
+  }
+
+  _drawWallSides(ctx, sx, sy) {
+    ctx.save();
     ctx.beginPath();
     ctx.moveTo(sx - TILE_W / 2, sy + TILE_H / 2);
     ctx.lineTo(sx,               sy + TILE_H);
@@ -579,6 +646,7 @@ class InputHandler {
     this.joystickCurrentX = 0;
     this.joystickCurrentY = 0;
     this._lastTapTime     = 0;
+    this._keys            = {};
 
     this._setupListeners();
   }
@@ -598,6 +666,8 @@ class InputHandler {
   }
 
   _setupListeners() {
+    window.addEventListener('keydown', e => { this._keys[e.code] = true; });
+    window.addEventListener('keyup',   e => { this._keys[e.code] = false; });
     const c = this.canvas;
     if ('onpointerdown' in window) {
       c.addEventListener('pointerdown',   e => this._onDown(e));
@@ -656,6 +726,23 @@ class InputHandler {
     if (dist < 5) return null;
     const mag = Math.min(dist, JOYSTICK_RADIUS);
     return { dx: (dx / dist) * (mag / JOYSTICK_RADIUS), dy: (dy / dist) * (mag / JOYSTICK_RADIUS), angle: Math.atan2(dy, dx) };
+  }
+
+  getKeyboardVector() {
+    const w = this._keys['KeyW'] || this._keys['ArrowUp'];
+    const s = this._keys['KeyS'] || this._keys['ArrowDown'];
+    const a = this._keys['KeyA'] || this._keys['ArrowLeft'];
+    const d = this._keys['KeyD'] || this._keys['ArrowRight'];
+    if (!w && !s && !a && !d) return null;
+    // WASD maps directly to isometric world axes: W=(-1,-1), S=(+1,+1), A=(-1,+1), D=(+1,-1)
+    let dx = 0, dy = 0;
+    if (w) { dx -= 1; dy -= 1; }
+    if (s) { dx += 1; dy += 1; }
+    if (a) { dx -= 1; dy += 1; }
+    if (d) { dx += 1; dy -= 1; }
+    const dist = Math.hypot(dx, dy);
+    if (dist === 0) return null;
+    return { dx: dx / dist, dy: dy / dist, angle: Math.atan2(dy, dx) };
   }
 
   drawJoystick(ctx) {
@@ -763,6 +850,7 @@ class Game {
       this.skeletons.push(new Skeleton(floorTiles[i].tx + 0.5, floorTiles[i].ty + 0.5));
 
     this.boss = new Boss(31, 32);
+    this._respawnQueue = [];
 
     window.addEventListener('resize', () => this.resize());
     this.resize();
@@ -789,11 +877,24 @@ class Game {
         this.sparkles.spawn(sk.wx, sk.wy, 32);
         this.skeletons.splice(i, 1);
         this.score += 10;
+        this._respawnQueue.push({ timer: 5000 + Math.random() * 4000 });
         return;
       }
     }
 
     this.player.setTarget(wx, wy);
+  }
+
+  _spawnSkeleton() {
+    const candidates = [];
+    for (let ty = 0; ty < MAP_H; ty++)
+      for (let tx = 0; tx < MAP_W; tx++)
+        if (this.map.getTile(tx, ty) === 'floor' &&
+            Math.hypot(tx - this.player.wx, ty - this.player.wy) > 8)
+          candidates.push({ tx, ty });
+    if (candidates.length === 0) return;
+    const t = candidates[Math.floor(Math.random() * candidates.length)];
+    this.skeletons.push(new Skeleton(t.tx + 0.5, t.ty + 0.5));
   }
 
   resize() {
@@ -812,12 +913,22 @@ class Game {
     this.elapsed += dt;
 
     const jv = this.input.getJoystickVector();
-    if (jv) {
-      const speed = PLAYER_SPEED * dt / 16.67;
-      this.player.wx    += (jv.dx + jv.dy) * speed * 0.72;
-      this.player.wy    += (jv.dy - jv.dx) * speed * 0.72;
-      this.player.moving = true;
-      this.player.facing = Math.round(((jv.angle + Math.PI) / (Math.PI * 2)) * 8) % 8;
+    const kv = this.input.getKeyboardVector();
+    if (jv || kv) {
+      const speed = DIRECT_SPEED * dt / 16.67;
+      if (jv) {
+        this.player.wx    += (jv.dx + jv.dy) * speed * 0.72;
+        this.player.wy    += (jv.dy - jv.dx) * speed * 0.72;
+        this.player.facing = Math.round(((jv.angle + Math.PI) / (Math.PI * 2)) * 8) % 8;
+      }
+      if (kv) {
+        this.player.wx    += kv.dx * speed;
+        this.player.wy    += kv.dy * speed;
+        this.player.facing = Math.round(((kv.angle + Math.PI) / (Math.PI * 2)) * 8) % 8;
+      }
+      this.player.moving  = true;
+      this.player.targetX = this.player.wx;
+      this.player.targetY = this.player.wy;
       this.player.animTimer += dt;
       if (this.player.animTimer > 95) { this.player.animFrame = (this.player.animFrame + 1) % 8; this.player.animTimer = 0; }
     } else {
@@ -826,6 +937,14 @@ class Game {
 
     this.player.wx = Math.max(1.5, Math.min(MAP_W - 2.5, this.player.wx));
     this.player.wy = Math.max(1.5, Math.min(MAP_H - 2.5, this.player.wy));
+
+    for (let i = this._respawnQueue.length - 1; i >= 0; i--) {
+      this._respawnQueue[i].timer -= dt;
+      if (this._respawnQueue[i].timer <= 0) {
+        this._respawnQueue.splice(i, 1);
+        this._spawnSkeleton();
+      }
+    }
 
     this.skeletons.forEach(sk => sk.update(dt, this.map));
     if (this.boss) this.boss.update(dt, this.map);
@@ -840,6 +959,8 @@ class Game {
     const { W, H } = this;
 
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+
+    this.map.renderBackground(ctx, this.cam, W, H);
 
     const entities = [this.player, ...this.skeletons];
     if (this.boss) entities.push(this.boss);
