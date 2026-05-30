@@ -71,7 +71,7 @@ html, body {
   flex-direction: column;
   align-items: stretch;
   justify-content: space-between;
-  padding: 0;
+  padding: env(safe-area-inset-top, 0px) 0 max(10px, env(safe-area-inset-bottom)) 0;
   height: 100%;
 }
 
