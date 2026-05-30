@@ -398,6 +398,20 @@ html, body {
   color: oklch(0.5 0.10 310);
 }
 
+.overlay-mode-rule {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 5px 18px;
+  border-radius: 999px;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.72rem, 2.8vw, 0.85rem);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: rgba(255, 255, 255, 0.38);
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  color: oklch(0.42 0.14 340);
+}
+
 /* classic: semi-transparent so ghost numbers show through */
 body[data-mode="classic"] #showtime-overlay {
   background: rgba(255, 215, 238, 0.80);
@@ -846,6 +860,12 @@ body[data-mode="hard"] .overlay-body {
 
 body[data-mode="hard"] .overlay-body em {
   color: oklch(0.88 0.09 245);
+}
+
+body[data-mode="hard"] .overlay-mode-rule {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: oklch(0.90 0.06 300);
 }
 
 body[data-mode="hard"] .overlay-rules {
@@ -1338,6 +1358,12 @@ body[data-mode="extreme"] .overlay-body em {
 
 body[data-mode="extreme"] .overlay-rules {
   color: oklch(0.48 0.11 28);
+}
+
+body[data-mode="extreme"] .overlay-mode-rule {
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.7);
+  color: oklch(0.38 0.14 18);
 }
 
 #game-screen[data-mode="extreme"] {

@@ -141,6 +141,7 @@
       <div class="overlay-heading">WARM-UP</div>
       <div class="overlay-stars">✨</div>
       <div class="overlay-body">Just play — I'm learning <em>how fast you are.</em><br>No score yet!</div>
+      <div id="warmup-rule" class="overlay-mode-rule"></div>
     </div>
     <!-- go panel (showtime) -->
     <div id="showtime-panel" class="overlay-panel">
@@ -322,6 +323,14 @@
           : 'Tap SNAP when the numbers match ✨';
 
         if (['classic', 'hard', 'extreme'].includes(mode)) {
+          const ruleEl = document.getElementById('warmup-rule');
+          if (ruleEl) {
+            ruleEl.textContent = mode === 'classic'
+              ? '🔢 Match the numbers'
+              : mode === 'hard'
+              ? '🔢 Numbers · 🎨 Colours'
+              : '🔢 Numbers · 🎨 Colours · 🏃 Moving SNAP';
+          }
           const wo = document.getElementById('showtime-overlay');
           wo.dataset.state = 'warmup';
           wo.style.display = 'flex';
@@ -803,68 +812,67 @@
       },
 
       _placeSnapBtn() {
-        const btn         = document.getElementById('snap-btn');
-        const header      = document.getElementById('header');
+        const btn    = document.getElementById('snap-btn');
+        const header = document.getElementById('header');
         const w   = btn.offsetWidth  || 200;
         const h   = btn.offsetHeight || 72;
         const pad = 14;
+
         const safeTop    = header.getBoundingClientRect().bottom + pad;
-        const safeBottom = window.innerHeight - h - (pad * 2);
-        const maxX       = window.innerWidth - w - pad;
-        const maxY       = Math.max(safeTop, safeBottom);
-        const minJump    = Math.min(window.innerWidth, window.innerHeight) * 0.32;
-        let nextX = pad;
-        let nextY = safeTop;
-        let attempts = 0;
+        const safeRight  = Math.max(pad, window.innerWidth  - w - pad);
+        const safeBottom = Math.max(safeTop, window.innerHeight - h - pad);
+        const minJump    = Math.min(window.innerWidth, window.innerHeight) * 0.28;
 
-        const botRect = document.getElementById('bot-number').getBoundingClientRect();
-const playerRect = document.getElementById('player-number').getBoundingClientRect();
+        // Check the number elements only — the button can be beside the panel
+        // card as long as it doesn't sit on top of the actual digits or labels
+        const numberEls = [
+          document.getElementById('bot-number'),
+          document.getElementById('player-number'),
+          document.querySelector('#game-screen .panel:first-of-type .panel-label'),
+          document.querySelector('#game-screen .panel:last-of-type .panel-label'),
+        ].filter(Boolean);
+        const numberRects = numberEls.map(el => el.getBoundingClientRect());
 
-const overlapsNumber = (x, y) => {
-  const padding = 40;
+        const coversNumber = (x, y) => {
+          const gutter = 24;
+          return numberRects.some(r =>
+            x < r.right  + gutter && x + w > r.left - gutter &&
+            y < r.bottom + gutter && y + h > r.top  - gutter
+          );
+        };
 
-  const overlapsBot =
-    x < botRect.right + padding &&
-    x + w > botRect.left - padding &&
-    y < botRect.bottom + padding &&
-    y + h > botRect.top - padding;
+        const curX = parseFloat(btn.style.left) || 0;
+        const curY = parseFloat(btn.style.top)  || 0;
 
-  const overlapsPlayer =
-    x < playerRect.right + padding &&
-    x + w > playerRect.left - padding &&
-    y < playerRect.bottom + padding &&
-    y + h > playerRect.top - padding;
+        let nextX = null;
+        let nextY = null;
 
-  return overlapsBot || overlapsPlayer;
-};
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const tx = pad     + Math.random() * Math.max(0, safeRight  - pad);
+          const ty = safeTop + Math.random() * Math.max(0, safeBottom - safeTop);
+          if (coversNumber(tx, ty)) continue;
+          if (Math.hypot(tx - curX, ty - curY) >= minJump || attempt >= 15) {
+            nextX = tx;
+            nextY = ty;
+            break;
+          }
+        }
 
-        do {
-  const zone = this._pick([
-    { x: [pad, window.innerWidth * 0.22], y: [safeTop, window.innerHeight * 0.24] },
-    { x: [window.innerWidth * 0.68, maxX], y: [safeTop, window.innerHeight * 0.24] },
-    { x: [pad, window.innerWidth * 0.18], y: [window.innerHeight * 0.38, window.innerHeight * 0.62] },
-    { x: [window.innerWidth * 0.76 - w, maxX], y: [window.innerHeight * 0.38, window.innerHeight * 0.62] },
-    { x: [pad, window.innerWidth * 0.22], y: [window.innerHeight * 0.76, maxY] },
-    { x: [window.innerWidth * 0.68, maxX], y: [window.innerHeight * 0.76, maxY] },
-  ]);
+        // Fallback: any non-overlapping position
+        if (nextX === null) {
+          for (let i = 0; i < 20; i++) {
+            const tx = pad     + Math.random() * Math.max(0, safeRight  - pad);
+            const ty = safeTop + Math.random() * Math.max(0, safeBottom - safeTop);
+            if (!coversNumber(tx, ty)) { nextX = tx; nextY = ty; break; }
+          }
+        }
+        if (nextX === null) {
+          nextX = safeRight  / 2;
+          nextY = safeTop + (safeBottom - safeTop) / 2;
+        }
 
-  const xMin = Math.min(zone.x[0], zone.x[1]);
-  const xMax = Math.max(zone.x[0], zone.x[1]);
-  const yMin = Math.min(zone.y[0], zone.y[1]);
-  const yMax = Math.max(zone.y[0], zone.y[1]);
-
-  nextX = this._randInt(Math.round(xMin), Math.round(xMax));
-  nextY = this._randInt(Math.round(yMin), Math.round(yMax));
-  attempts++;
-} while (
-  attempts < 20 &&
-  (
-    Math.hypot(nextX - (parseFloat(btn.style.left) || 0), nextY - (parseFloat(btn.style.top) || 0)) < minJump ||
-    overlapsNumber(nextX, nextY)
-  )
-);
-        btn.style.left = Math.max(pad, Math.min(maxX, nextX)) + 'px';
-        btn.style.top  = Math.max(safeTop, Math.min(maxY, nextY)) + 'px';
+        btn.style.left = Math.max(pad, Math.min(safeRight,  nextX)) + 'px';
+        btn.style.top  = Math.max(safeTop,  Math.min(safeBottom, nextY)) + 'px';
         this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._extremeMoveDelay());
       },
 
