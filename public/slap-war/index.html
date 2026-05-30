@@ -1,877 +1,469 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Slap War</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #000;
-      overflow: hidden;
-      width: 100vw;
-      height: 100vh;
-      touch-action: none;
-    }
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
 
-<!-- Block 1: Constants -->
-<script>
-const TILE_W          = 64;
-const TILE_H          = 32;
-const WALL_H          = 22;
-const MAP_W           = 42;
-const MAP_H           = 42;
-const PLAYER_SPEED    = 4.2;
-const SKELETON_COUNT  = 8;
-const SKELETON_SPEED  = 0.95;
-const LIGHT_RADIUS    = 195;
-const JOYSTICK_RADIUS = 62;
-const JOYSTICK_KNOB   = 26;
-const HIT_RADIUS_SK   = 1.3;  // world-tile radius to register a skeleton tap
-const HIT_RADIUS_BOSS = 1.8;  // world-tile radius to register a boss tap
-</script>
+  <!-- ── Start screen ── -->
+  <div id="start-screen" class="screen">
+    <h1>SNAP</h1>
+    <p>Select your game time</p>
+    <div class="time-options">
+      <button class="btn-primary" onclick="Game.start(60)">1 MIN</button>
+      <button class="btn-primary" onclick="Game.start(120)">2 MIN</button>
+    </div>
+  </div>
 
-<!-- Block 2: Classes -->
-<script>
-// ─── Coordinate transforms ─────────────────────────────────────────────────
-function worldToScreen(wx, wy, camX, camY, W, H) {
-  return {
-    sx: (wx - wy) * (TILE_W / 2) - camX + W / 2,
-    sy: (wx + wy) * (TILE_H / 2) - camY + H / 2
-  };
-}
+  <!-- ── Result screen ── -->
+  <div id="result-screen" class="screen" style="display:none">
+    <h1 id="result-heading"></h1>
+    <p>You scored <strong id="final-score">0</strong></p>
+    <p id="best-score-msg">Best: <strong id="best-score">0</strong> pts</p>
+    <button class="btn-primary" onclick="Game.goToStart()">Play Again</button>
+  </div>
 
-function screenToWorld(sx, sy, camX, camY, W, H) {
-  const dx = sx - W / 2 + camX;
-  const dy = sy - H / 2 + camY;
-  return {
-    wx: (dx / (TILE_W / 2) + dy / (TILE_H / 2)) / 2,
-    wy: (dy / (TILE_H / 2) - dx / (TILE_W / 2)) / 2
-  };
-}
+  <!-- ── Game screen ── -->
+  <div id="game-screen" class="screen">
 
-// ─── DungeonMap ────────────────────────────────────────────────────────────
-class DungeonMap {
-  constructor() {
-    this.tiles = [];
-    this._generate();
-  }
+    <div id="header">
+      <div id="score-display">Score: <span id="score">0</span></div>
+      <div id="countdown">0:00</div>
+    </div>
 
-  _generate() {
-    this.tiles = Array.from({ length: MAP_H }, () => Array(MAP_W).fill('wall'));
+    <!-- Bot number (top) -->
+    <div class="panel">
+      <div class="panel-label">TARGET</div>
+      <div class="number" id="bot-number">--</div>
+    </div>
 
-    const rooms = [
-      { x: 3,  y: 3,  w: 13, h: 11 },
-      { x: 25, y: 3,  w: 13, h: 11 },
-      { x: 3,  y: 27, w: 13, h: 11 },
-      { x: 25, y: 27, w: 13, h: 11 },
-    ];
+    <div class="divider"></div>
 
-    rooms.forEach(r => {
-      for (let ty = r.y; ty < r.y + r.h; ty++)
-        for (let tx = r.x; tx < r.x + r.w; tx++)
-          if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H)
-            this.tiles[ty][tx] = 'floor';
-    });
+    <!-- SNAP zone (middle) -->
+    <div id="mid-zone">
+      <div id="message"></div>
+      <button id="snap-btn" onclick="Game.handleSnap()">SNAP!</button>
+    </div>
 
-    const corridor = (x0, x1, y0, y1) => {
-      for (let ty = Math.min(y0, y1); ty <= Math.max(y0, y1); ty++)
-        for (let tx = Math.min(x0, x1); tx <= Math.max(x0, x1); tx++)
-          if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H)
-            this.tiles[ty][tx] = 'floor';
-    };
+    <div class="divider"></div>
 
-    const midY01 = rooms[0].y + Math.floor(rooms[0].h / 2);
-    corridor(rooms[0].x + rooms[0].w - 1, rooms[1].x, midY01 - 1, midY01 + 1);
-    const midY23 = rooms[2].y + Math.floor(rooms[2].h / 2);
-    corridor(rooms[2].x + rooms[2].w - 1, rooms[3].x, midY23 - 1, midY23 + 1);
-    const midX02 = rooms[0].x + Math.floor(rooms[0].w / 2);
-    corridor(midX02 - 1, midX02 + 1, rooms[0].y + rooms[0].h - 1, rooms[2].y);
-    const midX13 = rooms[1].x + Math.floor(rooms[1].w / 2);
-    corridor(midX13 - 1, midX13 + 1, rooms[1].y + rooms[1].h - 1, rooms[3].y);
-  }
+    <!-- Player number (bottom) -->
+    <div class="panel">
+      <div class="number" id="player-number">--</div>
+      <div class="panel-label">YOUR NUMBER</div>
+    </div>
 
-  getTile(tx, ty) {
-    if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return 'wall';
-    return this.tiles[ty][tx];
-  }
+  </div>
 
-  render(ctx, cam, W, H, entities, elapsed) {
-    for (let ty = 0; ty < MAP_H; ty++) {
-      for (let tx = 0; tx < MAP_W; tx++) {
-        const { sx, sy } = worldToScreen(tx, ty, cam.x, cam.y, W, H);
-        if (sx < -TILE_W * 2 || sx > W + TILE_W * 2 ||
-            sy < -TILE_H * 2 || sy > H + TILE_H * 3) continue;
-        const tile = this.tiles[ty][tx];
-        if (tile === 'floor') this._drawFloor(ctx, sx, sy);
-        else                  this._drawWall(ctx, sx, sy);
-      }
-      for (const entity of entities) {
-        if (Math.floor(entity.wy) === ty) {
-          const { sx, sy } = worldToScreen(entity.wx, entity.wy, cam.x, cam.y, W, H);
-          entity.draw(ctx, sx, sy + TILE_H / 2, elapsed);
-        }
-      }
-    }
-  }
+  <script>
+    const Game = {
+      score: 0,
+      botNum: 0,
+      playerNum: 0,
+      isMatch: false,
+      _justSnapped: false,
+      _peakScore: 0,
+      _gameStartTime: 0,
+      _duration: 0,
 
-  _drawFloor(ctx, sx, sy) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(sx,              sy);
-    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
-    ctx.lineTo(sx,              sy + TILE_H);
-    ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
-    ctx.closePath();
-    ctx.fillStyle   = '#1a1510';
-    ctx.fill();
-    ctx.strokeStyle = '#252018';
-    ctx.lineWidth   = 0.5;
-    ctx.stroke();
-    ctx.restore();
-  }
+      // Number timers
+      _botTimer: null,
+      _playerTimer: null,
+      _matchWindowTimer: null,
+      _msgTimer: null,
+      _greedyTimer: null,
 
-  _drawWall(ctx, sx, sy) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(sx,              sy);
-    ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
-    ctx.lineTo(sx,              sy + TILE_H);
-    ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
-    ctx.closePath();
-    ctx.fillStyle   = '#2d2824';
-    ctx.fill();
-    ctx.strokeStyle = '#3d3830';
-    ctx.lineWidth   = 0.5;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(sx - TILE_W / 2, sy + TILE_H / 2);
-    ctx.lineTo(sx,               sy + TILE_H);
-    ctx.lineTo(sx,               sy + TILE_H + WALL_H);
-    ctx.lineTo(sx - TILE_W / 2,  sy + TILE_H / 2 + WALL_H);
-    ctx.closePath();
-    ctx.fillStyle = '#1a1510';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(sx,               sy + TILE_H);
-    ctx.lineTo(sx + TILE_W / 2,  sy + TILE_H / 2);
-    ctx.lineTo(sx + TILE_W / 2,  sy + TILE_H / 2 + WALL_H);
-    ctx.lineTo(sx,               sy + TILE_H + WALL_H);
-    ctx.closePath();
-    ctx.fillStyle = '#141210';
-    ctx.fill();
-    ctx.restore();
-  }
-}
+      // Button roaming
+      _moveTimer: null,
 
-// ─── Player ────────────────────────────────────────────────────────────────
-class Player {
-  constructor(startX, startY) {
-    this.wx = startX; this.wy = startY;
-    this.targetX = startX; this.targetY = startY;
-    this.moving = false; this.facing = 2;
-    this.animFrame = 0; this.animTimer = 0;
-  }
+      // Number colour cycles
+      _botColorTimer: null,
+      _playerColorTimer: null,
 
-  setTarget(wx, wy) { this.targetX = wx; this.targetY = wy; this.moving = true; }
+      // Match guarantee timers
+      _firstMatchTimer: null,
+      _safetyTimer: null,
 
-  update(dt) {
-    if (!this.moving) { this.animFrame = 0; this.animTimer = 0; return; }
-    const dx = this.targetX - this.wx, dy = this.targetY - this.wy;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 0.1) { this.wx = this.targetX; this.wy = this.targetY; this.moving = false; return; }
-    const speed = PLAYER_SPEED * dt / 16.67;
-    this.wx += (dx / dist) * speed;
-    this.wy += (dy / dist) * speed;
-    this.facing = Math.round(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * 8) % 8;
-    this.animTimer += dt;
-    if (this.animTimer > 95) { this.animFrame = (this.animFrame + 1) % 8; this.animTimer = 0; }
-  }
+      // Game end
+      _gameEndTimer: null,
+      _countdownTimer: null,
 
-  draw(ctx, feetX, feetY, elapsed) {
-    ctx.save();
-    const bob  = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 3 : 0;
-    const gy   = feetY + bob;
-    const sway = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 2 : 0;
-    if (this.facing >= 3 && this.facing <= 5) { ctx.translate(feetX, 0); ctx.scale(-1, 1); ctx.translate(-feetX, 0); }
+      BOT_MIN: 1500,   BOT_MAX: 2500,
+      PLAY_MIN: 1700,  PLAY_MAX: 2800,
+      MATCH_WINDOW: 800,
+      NUDGE_CHANCE: 0.15,
+      MOVE_MIN: 1800,  MOVE_MAX: 4500,
+      BOT_COLOR_MIN: 2500,  BOT_COLOR_MAX: 6000,
+      PLAY_COLOR_MIN: 3000, PLAY_COLOR_MAX: 7000,
+      FIRST_MATCH_MIN: 2000, FIRST_MATCH_MAX: 6500,
+      SAFETY_WINDOW: 30000,
+      SPEED_MIN_FACTOR: 0.35,
 
-    ctx.beginPath(); ctx.ellipse(feetX, gy + 3, 11, 4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
+      // Vibrant palette — all readable on dark background
+      _colorPalette: [
+        '#4a90d9', '#9c6bef', '#26c6da', '#ff7043',
+        '#ec407a', '#66bb6a', '#ffa726', '#26a69a',
+        '#ef5350', '#ab47bc',
+      ],
 
-    const step = this.moving ? (this.animFrame % 2 === 0 ? 3 : 0) : 0;
-    ctx.fillStyle = '#3a2810';
-    ctx.fillRect(feetX - 6 + sway, gy - 12 + step, 4, 12);
-    ctx.fillRect(feetX + 2 + sway, gy - 12 + (step ? 0 : 3), 4, 12 - (step ? 0 : 3));
+      _greedyMessages: [
+        "Don't be greedy — already banked! 🤑",
+        "Oi! You already got those points! 😏",
+        "Cool your jets — that one's already yours!",
+        "Once is enough, champ 😄",
+        "Points are in the bag, put the button down! 🛑",
+      ],
 
-    ctx.beginPath();
-    ctx.moveTo(feetX - 10 + sway, gy - 8); ctx.lineTo(feetX + 10 + sway, gy - 8);
-    ctx.lineTo(feetX + 12 + sway, gy - 32); ctx.lineTo(feetX - 12 + sway, gy - 32);
-    ctx.closePath(); ctx.fillStyle = '#3d1a1a'; ctx.fill();
-    ctx.strokeStyle = '#5a2525'; ctx.lineWidth = 0.8; ctx.stroke();
+      _successMessages: [
+        'SNAP! Great timing! +5',
+        'YES! Right on the money! +5',
+        'Got it! Quick reflexes! +5',
+        'Nailed it! +5',
+        'Slap War champion move! +5',
+      ],
 
-    ctx.beginPath();
-    ctx.moveTo(feetX + sway,     gy - 42); ctx.lineTo(feetX + 8 + sway,  gy - 32);
-    ctx.lineTo(feetX + 6 + sway, gy - 22); ctx.lineTo(feetX - 6 + sway,  gy - 22);
-    ctx.lineTo(feetX - 8 + sway, gy - 32); ctx.closePath();
-    ctx.fillStyle = '#4a3020'; ctx.fill(); ctx.strokeStyle = '#6a4a30'; ctx.lineWidth = 0.8; ctx.stroke();
+      _missWords: ['BOO! 👎', 'MISSED! 💨', 'TOO SLOW! ⚡', 'NOPE! 🙅', 'OOPS! 😬', 'SO CLOSE! 😤'],
 
-    ctx.beginPath(); ctx.arc(feetX + sway, gy - 46, 7, 0, Math.PI * 2);
-    ctx.fillStyle = '#3a3020'; ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(feetX + sway, gy - 56); ctx.lineTo(feetX + 5 + sway, gy - 44);
-    ctx.lineTo(feetX - 5 + sway, gy - 44); ctx.closePath();
-    ctx.fillStyle = '#4a4030'; ctx.fill();
+      // ── Lifecycle ─────────────────────────────────────────
 
-    ctx.save(); ctx.shadowBlur = 7; ctx.shadowColor = '#ff8800';
-    ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(feetX - 4 + sway, gy - 45); ctx.lineTo(feetX + 4 + sway, gy - 45); ctx.stroke();
-    ctx.restore();
+      start(durationSeconds) {
+        this._duration = durationSeconds * 1000;
 
-    ctx.save(); ctx.strokeStyle = '#8a8aaa'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(feetX + 11 + sway, gy - 16); ctx.lineTo(feetX + 14 + sway, gy - 42); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(feetX + 7 + sway, gy - 33); ctx.lineTo(feetX + 18 + sway, gy - 33); ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(feetX + 12 + sway, gy - 16, 3, 0, Math.PI * 2);
-    ctx.fillStyle = '#7a7a9a'; ctx.fill(); ctx.restore();
+        document.getElementById('start-screen').style.display  = 'none';
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display   = 'flex';
 
-    ctx.restore();
-  }
-}
+        this.score = 0;
+        this._peakScore = 0;
+        this._justSnapped = false;
+        this._gameStartTime = Date.now();
+        this._updateScore();
+        document.getElementById('snap-btn').disabled = false;
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────
-class Skeleton {
-  constructor(startX, startY) {
-    this.wx = startX; this.wy = startY;
-    this.targetX = startX; this.targetY = startY;
-    this.moving = false; this.facing = Math.floor(Math.random() * 8);
-    this.animFrame = 0; this.animTimer = 0;
-    this.idleTimer = Math.random() * 1500;
-  }
+        this.botNum = this._randInt(1, 100);
+        do { this.playerNum = this._randInt(1, 100); } while (this.playerNum === this.botNum);
+        this._setWithPulse('bot-number',    this.botNum);
+        this._setWithPulse('player-number', this.playerNum);
 
-  update(dt, map) {
-    if (!this.moving) {
-      this.idleTimer -= dt; this.animFrame = 0;
-      if (this.idleTimer <= 0) {
-        let placed = false;
-        for (let a = 0; a < 25; a++) {
-          const tx = Math.floor(this.wx) + Math.round((Math.random() - 0.5) * 12);
-          const ty = Math.floor(this.wy) + Math.round((Math.random() - 0.5) * 12);
-          if (map.getTile(tx, ty) === 'floor') {
-            this.targetX = tx + 0.5; this.targetY = ty + 0.5;
-            this.moving = true; this.idleTimer = 800 + Math.random() * 2200;
-            placed = true; break;
+        this._scheduleBotChange();
+        this._schedulePlayerChange();
+        this._startMoving();
+        this._startColorCycles();
+        this._scheduleFirstMatch();
+        this._resetSafetyTimer();
+        this._startCountdown();
+        this._gameEndTimer = setTimeout(() => this._endGame(), this._duration);
+      },
+
+      goToStart() {
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display  = '';
+      },
+
+      _endGame() {
+        clearTimeout(this._botTimer);
+        clearTimeout(this._playerTimer);
+        clearTimeout(this._matchWindowTimer);
+        clearTimeout(this._msgTimer);
+        clearTimeout(this._greedyTimer);
+        clearTimeout(this._firstMatchTimer);
+        clearTimeout(this._safetyTimer);
+        clearTimeout(this._gameEndTimer);
+        this._stopCountdown();
+        this._stopMoving();
+        this._stopColorCycles();
+
+        const best = parseInt(localStorage.getItem('slapwar-best') || '0', 10);
+        if (this._peakScore > best) localStorage.setItem('slapwar-best', this._peakScore);
+        const displayBest = Math.max(this._peakScore, best);
+
+        const won = this.score > 0;
+        const heading = document.getElementById('result-heading');
+        heading.textContent = won ? 'YOU WIN!' : 'YOU LOST';
+        heading.className   = won ? 'win' : 'lose';
+
+        document.getElementById('final-score').textContent = this.score;
+        document.getElementById('best-score').textContent  = displayBest;
+
+        this.isMatch = false;
+        this._justSnapped = false;
+
+        document.getElementById('bot-number').textContent    = '--';
+        document.getElementById('player-number').textContent = '--';
+        document.getElementById('message').className         = '';
+        document.getElementById('snap-btn').disabled         = false;
+
+        document.getElementById('game-screen').style.display  = 'none';
+        document.getElementById('result-screen').style.display = '';
+      },
+
+      // ── Match guarantees ──────────────────────────────────
+
+      _scheduleFirstMatch() {
+        const delay = this._randInt(this.FIRST_MATCH_MIN, this.FIRST_MATCH_MAX);
+        this._firstMatchTimer = setTimeout(() => {
+          if (!this.isMatch) {
+            clearTimeout(this._botTimer);
+            this.botNum = this.playerNum;
+            this._setWithPulse('bot-number', this.botNum);
+            this._checkMatch();
           }
-        }
-        if (!placed) this.idleTimer = 400;
-      }
-      return;
-    }
-    const dx = this.targetX - this.wx, dy = this.targetY - this.wy;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 0.1) { this.wx = this.targetX; this.wy = this.targetY; this.moving = false; return; }
-    const speed = SKELETON_SPEED * dt / 16.67;
-    this.wx += (dx / dist) * speed; this.wy += (dy / dist) * speed;
-    this.facing = Math.round(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * 8) % 8;
-    this.animTimer += dt;
-    if (this.animTimer > 130) { this.animFrame = (this.animFrame + 1) % 8; this.animTimer = 0; }
-  }
+        }, delay);
+      },
 
-  draw(ctx, feetX, feetY, elapsed) {
-    ctx.save();
-    const bob = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 2 : Math.sin(elapsed * 0.0018) * 1;
-    const gy  = feetY + bob;
-    if (this.facing >= 3 && this.facing <= 5) { ctx.translate(feetX, 0); ctx.scale(-1, 1); ctx.translate(-feetX, 0); }
-
-    ctx.beginPath(); ctx.ellipse(feetX, gy + 3, 8, 3, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
-
-    const bone = '#c2baa8', dark = '#7a7468';
-    const leftStep  = this.moving && this.animFrame % 2 === 0 ? 3 : 0;
-    const rightStep = this.moving && this.animFrame % 2 === 1 ? 3 : 0;
-    ctx.strokeStyle = bone; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(feetX - 3, gy); ctx.lineTo(feetX - 4, gy - 10 + leftStep); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(feetX + 3, gy); ctx.lineTo(feetX + 4, gy - 10 + rightStep); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(feetX - 5, gy - 10); ctx.lineTo(feetX + 5, gy - 10); ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(feetX, gy - 10); ctx.lineTo(feetX, gy - 30); ctx.lineWidth = 1.5; ctx.stroke();
-
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 3; i++) {
-      const ry = gy - 15 - i * 5;
-      ctx.beginPath(); ctx.moveTo(feetX, ry); ctx.quadraticCurveTo(feetX - 8, ry - 1, feetX - 5, ry - 4); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(feetX, ry); ctx.quadraticCurveTo(feetX + 8, ry - 1, feetX + 5, ry - 4); ctx.stroke();
-    }
-
-    const armSwing = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 5 : 0;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(feetX - 3, gy - 28); ctx.lineTo(feetX - 10, gy - 20 + armSwing); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(feetX + 3, gy - 28); ctx.lineTo(feetX + 10, gy - 20 - armSwing); ctx.stroke();
-
-    ctx.fillStyle = bone;
-    ctx.beginPath(); ctx.arc(feetX, gy - 37, 6, 0, Math.PI * 2); ctx.fill();
-
-    ctx.fillStyle = '#0d0a08';
-    ctx.beginPath(); ctx.ellipse(feetX - 2.2, gy - 38, 1.7, 2, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(feetX + 2.2, gy - 38, 1.7, 2, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(feetX, gy - 34, 1, 0, Math.PI * 2); ctx.fill();
-
-    ctx.strokeStyle = dark; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(feetX - 3.5, gy - 31); ctx.lineTo(feetX + 3.5, gy - 31); ctx.stroke();
-    for (let t = -3; t <= 3; t += 2) {
-      ctx.beginPath(); ctx.moveTo(feetX + t, gy - 31); ctx.lineTo(feetX + t, gy - 33); ctx.stroke();
-    }
-    ctx.restore();
-  }
-}
-
-// ─── Boss ──────────────────────────────────────────────────────────────────
-class Boss {
-  constructor(startX, startY) {
-    this.wx = startX; this.wy = startY;
-    this.targetX = startX; this.targetY = startY;
-    this.moving = false; this.facing = 4;
-    this.animFrame = 0; this.animTimer = 0;
-    this.idleTimer = 1200;
-    this.hp = 3; this.maxHp = 3;
-    this.hitFlash = 0;
-  }
-
-  hit() { this.hp--; this.hitFlash = 220; return this.hp <= 0; }
-
-  update(dt, map) {
-    if (this.hitFlash > 0) this.hitFlash -= dt;
-    if (!this.moving) {
-      this.idleTimer -= dt; this.animFrame = 0;
-      if (this.idleTimer <= 0) {
-        let placed = false;
-        for (let a = 0; a < 25; a++) {
-          const tx = Math.floor(this.wx) + Math.round((Math.random() - 0.5) * 8);
-          const ty = Math.floor(this.wy) + Math.round((Math.random() - 0.5) * 8);
-          if (map.getTile(tx, ty) === 'floor') {
-            this.targetX = tx + 0.5; this.targetY = ty + 0.5;
-            this.moving = true; this.idleTimer = 1800 + Math.random() * 2500;
-            placed = true; break;
+      _resetSafetyTimer() {
+        clearTimeout(this._safetyTimer);
+        this._safetyTimer = setTimeout(() => {
+          if (!this.isMatch) {
+            clearTimeout(this._botTimer);
+            this.botNum = this.playerNum;
+            this._setWithPulse('bot-number', this.botNum);
+            this._checkMatch();
           }
+          this._resetSafetyTimer();
+        }, this.SAFETY_WINDOW);
+      },
+
+      // ── Speed ramp (tied to selected duration) ────────────
+
+      _speedFactor() {
+        const elapsed = Date.now() - this._gameStartTime;
+        const t = Math.min(elapsed / this._duration, 1);
+        return 1.0 - t * (1.0 - this.SPEED_MIN_FACTOR);
+      },
+
+      _scaledRandInt(min, max) {
+        const f = this._speedFactor();
+        return this._randInt(Math.round(min * f), Math.round(max * f));
+      },
+
+      // ── Countdown ─────────────────────────────────────────
+
+      _startCountdown() {
+        const tick = () => {
+          const remaining = Math.max(0, this._duration - (Date.now() - this._gameStartTime));
+          const totalSecs = Math.ceil(remaining / 1000);
+          const m = Math.floor(totalSecs / 60);
+          const s = totalSecs % 60;
+          document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
+          if (remaining > 0) this._countdownTimer = setTimeout(tick, 200);
+        };
+        tick();
+      },
+
+      _stopCountdown() {
+        clearTimeout(this._countdownTimer);
+      },
+
+      // ── Independent number timers ─────────────────────────
+
+      _scheduleBotChange() {
+        this._botTimer = setTimeout(() => {
+          this.botNum = Math.random() < this.NUDGE_CHANCE
+            ? this.playerNum
+            : this._randInt(1, 100);
+          this._setWithPulse('bot-number', this.botNum);
+          this._checkMatch();
+          if (!this.isMatch) this._scheduleBotChange();
+        }, this._scaledRandInt(this.BOT_MIN, this.BOT_MAX));
+      },
+
+      _schedulePlayerChange() {
+        this._playerTimer = setTimeout(() => {
+          this.playerNum = this._randInt(1, 100);
+          this._setWithPulse('player-number', this.playerNum);
+          this._checkMatch();
+          if (!this.isMatch) this._schedulePlayerChange();
+        }, this._scaledRandInt(this.PLAY_MIN, this.PLAY_MAX));
+      },
+
+      // ── Match detection ───────────────────────────────────
+
+      _checkMatch() {
+        if (this.botNum !== this.playerNum) return;
+        clearTimeout(this._botTimer);
+        clearTimeout(this._playerTimer);
+        clearTimeout(this._firstMatchTimer);
+        this._resetSafetyTimer();
+        this.isMatch = true;
+
+        this._matchWindowTimer = setTimeout(() => {
+          this.isMatch = false;
+          this._divergeBoth();
+          this._scheduleBotChange();
+          this._schedulePlayerChange();
+        }, this.MATCH_WINDOW);
+      },
+
+      // ── Player action ─────────────────────────────────────
+
+      handleSnap() {
+        if (this._justSnapped) {
+          this.showMessage(this._pick(this._greedyMessages), 'fail');
+          return;
         }
-        if (!placed) this.idleTimer = 600;
-      }
-      return;
-    }
-    const dx = this.targetX - this.wx, dy = this.targetY - this.wy;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 0.1) { this.wx = this.targetX; this.wy = this.targetY; this.moving = false; return; }
-    const speed = 0.6 * dt / 16.67;
-    this.wx += (dx / dist) * speed; this.wy += (dy / dist) * speed;
-    this.facing = Math.round(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * 8) % 8;
-    this.animTimer += dt;
-    if (this.animTimer > 180) { this.animFrame = (this.animFrame + 1) % 8; this.animTimer = 0; }
-  }
 
-  draw(ctx, feetX, feetY, elapsed) {
-    ctx.save();
-    if (this.hitFlash > 0) ctx.filter = 'brightness(4)';
-    ctx.translate(feetX, feetY);
-    ctx.scale(1.5, 1.5);
-    ctx.translate(-feetX, -feetY);
-    this._drawBody(ctx, feetX, feetY, elapsed);
-    ctx.restore();
-    this._drawHPBar(ctx, feetX, feetY - 80);
-  }
+        if (this.isMatch) {
+          this.isMatch = false;
+          clearTimeout(this._matchWindowTimer);
+          this.score += 5;
+          if (this.score > this._peakScore) this._peakScore = this.score;
+          this._updateScore();
+          this.showMessage(this._pick(this._successMessages), 'success');
+          this._glowNumbers();
+          this._divergeBoth();
 
-  _drawBody(ctx, feetX, feetY, elapsed) {
-    const bob = this.moving
-      ? Math.sin(this.animFrame * Math.PI / 4) * 2.5
-      : Math.sin(elapsed * 0.0015) * 1.5;
-    const gy = feetY + bob;
+          this._justSnapped = true;
+          clearTimeout(this._greedyTimer);
+          this._greedyTimer = setTimeout(() => { this._justSnapped = false; }, this.MATCH_WINDOW);
 
-    if (this.facing >= 3 && this.facing <= 5) {
-      ctx.translate(feetX, 0); ctx.scale(-1, 1); ctx.translate(-feetX, 0);
-    }
-
-    ctx.beginPath(); ctx.ellipse(feetX, gy + 3, 11, 4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
-
-    const flesh = '#7a9460', dark = '#3a4a28', bone = '#a89870';
-
-    const leftStep  = this.moving && this.animFrame % 2 === 0 ? 3 : 0;
-    const rightStep = this.moving && this.animFrame % 2 === 1 ? 3 : 0;
-    ctx.fillStyle = flesh;
-    ctx.fillRect(feetX - 6, gy - 12 + leftStep,  5, 12);
-    ctx.fillRect(feetX + 1, gy - 12 + rightStep, 5, 12);
-    ctx.fillStyle = dark;
-    ctx.fillRect(feetX - 6, gy - 5, 5, 2);
-    ctx.fillRect(feetX + 1, gy - 5, 5, 2);
-
-    ctx.fillStyle = flesh;
-    ctx.fillRect(feetX - 8, gy - 30, 16, 20);
-    ctx.strokeStyle = dark; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(feetX - 2, gy - 30); ctx.lineTo(feetX - 2, gy - 14); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(feetX + 3, gy - 30); ctx.lineTo(feetX + 3, gy - 14); ctx.stroke();
-    ctx.strokeStyle = bone; ctx.lineWidth = 0.8;
-    for (let i = 0; i < 3; i++) {
-      const ry = gy - 17 - i * 4;
-      ctx.beginPath(); ctx.moveTo(feetX + 7, ry); ctx.quadraticCurveTo(feetX + 11, ry - 1, feetX + 8, ry - 3); ctx.stroke();
-    }
-
-    const armBob = this.moving ? Math.sin(this.animFrame * Math.PI / 4) * 4 : 0;
-    ctx.fillStyle = flesh;
-    ctx.save(); ctx.translate(feetX - 8, gy - 24); ctx.rotate(-0.35);
-    ctx.fillRect(-13, -2.5, 13, 5); ctx.restore();
-    ctx.save(); ctx.translate(feetX + 8, gy - 24 - armBob * 0.3); ctx.rotate(0.35);
-    ctx.fillRect(0, -2.5, 13, 5); ctx.restore();
-
-    ctx.fillStyle = flesh; ctx.fillRect(feetX - 3, gy - 36, 6, 7);
-
-    ctx.fillStyle = flesh;
-    ctx.beginPath(); ctx.ellipse(feetX, gy - 44, 8, 9, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = dark; ctx.lineWidth = 0.6; ctx.stroke();
-
-    ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = '#ff0000';
-    ctx.fillStyle = '#dd1100';
-    ctx.beginPath(); ctx.ellipse(feetX - 3, gy - 45, 2, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(feetX + 3, gy - 45, 2, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-
-    ctx.fillStyle = dark; ctx.fillRect(feetX - 1, gy - 41, 2, 2);
-    ctx.fillStyle = '#1a0808'; ctx.fillRect(feetX - 4, gy - 37, 8, 4);
-    ctx.strokeStyle = '#5a9020'; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(feetX, gy - 37); ctx.lineTo(feetX + 1, gy - 32); ctx.stroke();
-
-    ctx.fillStyle = '#aa7700'; ctx.strokeStyle = '#664400'; ctx.lineWidth = 0.7;
-    ctx.beginPath(); ctx.moveTo(feetX - 5, gy - 51); ctx.lineTo(feetX - 9, gy - 63); ctx.lineTo(feetX - 2, gy - 53); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(feetX + 5, gy - 51); ctx.lineTo(feetX + 9, gy - 63); ctx.lineTo(feetX + 2, gy - 53); ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-
-  _drawHPBar(ctx, cx, y) {
-    ctx.save();
-    const barW = 58, barX = cx - barW / 2;
-
-    ctx.fillStyle = '#1a0505'; ctx.fillRect(barX - 1, y - 1, barW + 2, 11);
-
-    const segW = (barW - 4) / 3;
-    for (let i = 0; i < 3; i++) {
-      const sx = barX + 2 + i * (segW + 1);
-      ctx.fillStyle = i < this.hp ? '#cc1111' : '#2a0808';
-      ctx.fillRect(sx, y, segW, 8);
-      if (i < this.hp) {
-        ctx.fillStyle = 'rgba(255,100,100,0.3)';
-        ctx.fillRect(sx, y, segW, 3);
-      }
-    }
-    ctx.strokeStyle = '#7a2020'; ctx.lineWidth = 1; ctx.strokeRect(barX, y, barW, 9);
-
-    ctx.fillStyle = '#cc8800'; ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('BOSS', cx, y - 3);
-    ctx.restore();
-  }
-}
-
-// ─── SparkleSystem ─────────────────────────────────────────────────────────
-class SparkleSystem {
-  constructor() { this.particles = []; }
-
-  spawn(wx, wy, count) {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.018 + Math.random() * 0.065;
-      this.particles.push({
-        wx:    wx + (Math.random() - 0.5) * 0.4,
-        wy:    wy + (Math.random() - 0.5) * 0.4,
-        vx:    Math.cos(angle) * speed,
-        vy:    Math.sin(angle) * speed,
-        life:  1.0,
-        decay: 0.013 + Math.random() * 0.019,
-        size:  2.8 + Math.random() * 3.5,
-        hue:   306 + Math.random() * 48,
-      });
-    }
-  }
-
-  update(dt) {
-    const n = dt / 16.67;
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
-      p.wx   += p.vx * n;
-      p.wy   += p.vy * n;
-      p.wx   -= 0.00035 * dt;
-      p.wy   -= 0.00035 * dt;
-      p.life -= p.decay * n;
-      if (p.life <= 0) this.particles.splice(i, 1);
-    }
-  }
-
-  render(ctx, cam, W, H) {
-    for (const p of this.particles) {
-      const { sx, sy } = worldToScreen(p.wx, p.wy, cam.x, cam.y, W, H);
-      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
-      ctx.save();
-      ctx.globalAlpha = p.life * 0.95;
-      ctx.shadowBlur  = 9;
-      ctx.shadowColor = `hsl(${p.hue},100%,72%)`;
-      ctx.fillStyle   = `hsl(${p.hue},100%,${68 + p.life * 18}%)`;
-      this._star(ctx, sx, sy, p.size * p.life);
-      ctx.restore();
-    }
-  }
-
-  _star(ctx, cx, cy, r) {
-    ctx.beginPath();
-    for (let i = 0; i < 8; i++) {
-      const a   = (i / 8) * Math.PI * 2 - Math.PI / 4;
-      const len = i % 2 === 0 ? r : r * 0.35;
-      const x   = cx + Math.cos(a) * len;
-      const y   = cy + Math.sin(a) * len;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath(); ctx.fill();
-  }
-}
-
-// ─── LightingLayer ─────────────────────────────────────────────────────────
-class LightingLayer {
-  constructor() {
-    this.offscreen = document.createElement('canvas');
-    this.offctx    = this.offscreen.getContext('2d');
-  }
-
-  resize(w, h) { this.offscreen.width = w; this.offscreen.height = h; }
-
-  render(ctx, player, cam, W, H) {
-    const oc = this.offctx;
-    oc.clearRect(0, 0, oc.canvas.width, oc.canvas.height);
-    oc.fillStyle = 'rgba(0,0,0,0.87)';
-    oc.fillRect(0, 0, oc.canvas.width, oc.canvas.height);
-    oc.globalCompositeOperation = 'destination-out';
-
-    const { sx: px, sy: py } = worldToScreen(player.wx, player.wy, cam.x, cam.y, W, H);
-    const g = oc.createRadialGradient(px, py - 22, 0, px, py - 22, LIGHT_RADIUS);
-    g.addColorStop(0,    'rgba(0,0,0,0.95)');
-    g.addColorStop(0.45, 'rgba(0,0,0,0.72)');
-    g.addColorStop(0.75, 'rgba(0,0,0,0.3)');
-    g.addColorStop(1,    'rgba(0,0,0,0)');
-    oc.fillStyle = g;
-    oc.beginPath(); oc.arc(px, py - 22, LIGHT_RADIUS, 0, Math.PI * 2); oc.fill();
-
-    oc.globalCompositeOperation = 'source-over';
-    ctx.drawImage(this.offscreen, 0, 0);
-  }
-}
-
-// ─── InputHandler ──────────────────────────────────────────────────────────
-class InputHandler {
-  constructor(canvas, getCam, getSize) {
-    this.canvas   = canvas;
-    this.getCam   = getCam;
-    this.getSize  = getSize;
-    this.onWorldTap = null;
-
-    this.joystickActive   = false;
-    this.joystickPtrId    = null;
-    this.joystickOriginX  = 0;
-    this.joystickOriginY  = 0;
-    this.joystickCurrentX = 0;
-    this.joystickCurrentY = 0;
-    this._lastTapTime     = 0;
-
-    this._setupListeners();
-  }
-
-  _isJoystickZone(sx, sy) {
-    const { W, H } = this.getSize();
-    return sx < W * 0.32 && sy > H * 0.68;
-  }
-
-  _rawPos(e) {
-    const r   = this.canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    return {
-      rawX: (e.clientX - r.left) * (this.canvas.width  / r.width)  / dpr,
-      rawY: (e.clientY - r.top)  * (this.canvas.height / r.height) / dpr
-    };
-  }
-
-  _setupListeners() {
-    const c = this.canvas;
-    if ('onpointerdown' in window) {
-      c.addEventListener('pointerdown',   e => this._onDown(e));
-      c.addEventListener('pointermove',   e => this._onMove(e));
-      c.addEventListener('pointerup',     e => this._onUp(e));
-      c.addEventListener('pointercancel', e => this._onUp(e));
-    } else {
-      c.addEventListener('touchstart',  e => { e.preventDefault(); this._onDown(e.changedTouches[0]); }, { passive: false });
-      c.addEventListener('touchmove',   e => { e.preventDefault(); this._onMove(e.changedTouches[0]); }, { passive: false });
-      c.addEventListener('touchend',    e => { this._onUp(e.changedTouches[0]); });
-      c.addEventListener('mousedown',   e => this._onDown(e));
-      c.addEventListener('mousemove',   e => this._onMove(e));
-      c.addEventListener('mouseup',     e => this._onUp(e));
-    }
-  }
-
-  _onDown(e) {
-    const { rawX, rawY } = this._rawPos(e);
-    if (this._isJoystickZone(rawX, rawY) && this.joystickPtrId === null) {
-      this.joystickActive   = true;
-      this.joystickPtrId    = e.pointerId ?? e.identifier ?? 0;
-      this.joystickOriginX  = rawX; this.joystickOriginY  = rawY;
-      this.joystickCurrentX = rawX; this.joystickCurrentY = rawY;
-      if (this.canvas.setPointerCapture && e.pointerId != null)
-        this.canvas.setPointerCapture(e.pointerId);
-    } else if (this.onWorldTap) {
-      const now = Date.now();
-      if (now - this._lastTapTime < 80) return;
-      this._lastTapTime = now;
-      const cam      = this.getCam();
-      const { W, H } = this.getSize();
-      const world    = screenToWorld(rawX, rawY, cam.x, cam.y, W, H);
-      this.onWorldTap(world.wx, world.wy);
-    }
-  }
-
-  _onMove(e) {
-    const id = e.pointerId ?? e.identifier ?? 0;
-    if (!this.joystickActive || id !== this.joystickPtrId) return;
-    const { rawX, rawY } = this._rawPos(e);
-    this.joystickCurrentX = rawX; this.joystickCurrentY = rawY;
-  }
-
-  _onUp(e) {
-    const id = e.pointerId ?? e.identifier ?? 0;
-    if (id === this.joystickPtrId) {
-      this.joystickActive = false; this.joystickPtrId = null;
-    }
-  }
-
-  getJoystickVector() {
-    if (!this.joystickActive) return null;
-    const dx   = this.joystickCurrentX - this.joystickOriginX;
-    const dy   = this.joystickCurrentY - this.joystickOriginY;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 5) return null;
-    const mag = Math.min(dist, JOYSTICK_RADIUS);
-    return { dx: (dx / dist) * (mag / JOYSTICK_RADIUS), dy: (dy / dist) * (mag / JOYSTICK_RADIUS), angle: Math.atan2(dy, dx) };
-  }
-
-  drawJoystick(ctx) {
-    if (!this.joystickActive) return;
-    ctx.save();
-    const ox = this.joystickOriginX, oy = this.joystickOriginY;
-    ctx.beginPath(); ctx.arc(ox, oy, JOYSTICK_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,200,100,0.45)'; ctx.lineWidth = 2; ctx.stroke();
-    const dx = this.joystickCurrentX - ox, dy = this.joystickCurrentY - oy;
-    const dist = Math.hypot(dx, dy);
-    const kx = ox + (dist > 0 ? (dx / dist) * Math.min(dist, JOYSTICK_RADIUS) : 0);
-    const ky = oy + (dist > 0 ? (dy / dist) * Math.min(dist, JOYSTICK_RADIUS) : 0);
-    ctx.beginPath(); ctx.arc(kx, ky, JOYSTICK_KNOB, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,190,80,0.55)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,200,100,0.85)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.restore();
-  }
-}
-
-// ─── UIRenderer ────────────────────────────────────────────────────────────
-class UIRenderer {
-  render(ctx, W, H, score) {
-    const safe = 48, orbR = 34, orbY = H - safe - orbR;
-    this._drawOrb(ctx, W * 0.11, orbY, orbR, '#7a0000', '#bb1500', 0.82, 'Life');
-    this._drawOrb(ctx, W * 0.89, orbY, orbR, '#00006a', '#1a3ab8', 0.62, 'Mana');
-
-    const bW = W * 0.38, bX = W / 2 - bW / 2, bY = H - safe + 14;
-    ctx.save();
-    ctx.fillStyle = '#2a1a00'; ctx.fillRect(bX, bY, bW, 5);
-    ctx.fillStyle = '#bb7a00'; ctx.fillRect(bX, bY, bW * 0.28, 5);
-    ctx.strokeStyle = '#5a3a00'; ctx.lineWidth = 1; ctx.strokeRect(bX, bY, bW, 5);
-    ctx.restore();
-
-    ctx.save();
-    ctx.textAlign   = 'center';
-    ctx.shadowBlur  = 12;
-    ctx.shadowColor = '#884400';
-    ctx.fillStyle   = '#e8a020';
-    ctx.font        = 'bold 18px serif';
-    ctx.fillText(`Score: ${score}`, W / 2, 32);
-    ctx.restore();
-  }
-
-  _drawOrb(ctx, cx, cy, r, colorDark, colorBright, fill, label) {
-    ctx.save();
-    ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#0a0505'; ctx.fill();
-    ctx.save();
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
-    const fillY = cy + r - r * 2 * fill;
-    const g = ctx.createLinearGradient(cx, cy + r, cx, cy - r);
-    g.addColorStop(0, colorDark); g.addColorStop(1, colorBright);
-    ctx.fillStyle = g; ctx.fillRect(cx - r, fillY, r * 2, cy + r - fillY + 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(cx - r, fillY - 1, r * 2, 3);
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.strokeStyle = '#3a1a08'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = '#aa8855'; ctx.font = 'bold 11px serif'; ctx.textAlign = 'center';
-    ctx.fillText(label, cx, cy + r + 14);
-    for (const [dx, dy] of [[-0.7,-0.7],[0.7,-0.7],[-0.7,0.7],[0.7,0.7]]) {
-      ctx.save(); ctx.translate(cx + dx * r, cy + dy * r); ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = '#7a4820'; ctx.fillRect(-3, -3, 6, 6); ctx.restore();
-    }
-    ctx.restore();
-  }
-}
-
-// ─── Game ──────────────────────────────────────────────────────────────────
-class Game {
-  constructor() {
-    this.canvas  = document.getElementById('gameCanvas');
-    this.ctx     = this.canvas.getContext('2d');
-    this.W = 0; this.H = 0;
-    this.cam     = { x: 0, y: 0 };
-    this.elapsed = 0;
-    this.score   = 0;
-  }
-
-  init() {
-    this.map      = new DungeonMap();
-    this.player   = new Player(9, 8);
-    this.lighting = new LightingLayer();
-    this.sparkles = new SparkleSystem();
-    this.ui       = new UIRenderer();
-    this.input    = new InputHandler(
-      this.canvas,
-      () => this.cam,
-      () => ({ W: this.W, H: this.H })
-    );
-    this.input.onWorldTap = (wx, wy) => this._handleTap(wx, wy);
-
-    this.skeletons = [];
-    const floorTiles = [];
-    for (let ty = 0; ty < MAP_H; ty++)
-      for (let tx = 0; tx < MAP_W; tx++)
-        if (this.map.getTile(tx, ty) === 'floor' && Math.hypot(tx - 9, ty - 8) > 6)
-          floorTiles.push({ tx, ty });
-    for (let i = floorTiles.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [floorTiles[i], floorTiles[j]] = [floorTiles[j], floorTiles[i]];
-    }
-    for (let i = 0; i < Math.min(SKELETON_COUNT, floorTiles.length); i++)
-      this.skeletons.push(new Skeleton(floorTiles[i].tx + 0.5, floorTiles[i].ty + 0.5));
-
-    this.boss = new Boss(31, 32);
-
-    window.addEventListener('resize', () => this.resize());
-    this.resize();
-  }
-
-  _handleTap(wx, wy) {
-    if (this.boss) {
-      if (Math.hypot(this.boss.wx - wx, this.boss.wy - wy) < HIT_RADIUS_BOSS) {
-        const killed = this.boss.hit();
-        if (killed) {
-          this.sparkles.spawn(this.boss.wx, this.boss.wy, 65);
-          this.boss = null;
-          this.score += 30;
+          this._scheduleBotChange();
+          this._schedulePlayerChange();
         } else {
-          this.sparkles.spawn(this.boss.wx, this.boss.wy, 18);
+          this._showMissPop();
+          this.score -= 5;
+          this._updateScore();
+          this.showMessage(this.score < 0 ? 'In the red! -5 ⚠️' : 'Missed! -5', 'fail');
         }
-        return;
-      }
-    }
+      },
 
-    for (let i = 0; i < this.skeletons.length; i++) {
-      const sk = this.skeletons[i];
-      if (Math.hypot(sk.wx - wx, sk.wy - wy) < HIT_RADIUS_SK) {
-        this.sparkles.spawn(sk.wx, sk.wy, 32);
-        this.skeletons.splice(i, 1);
-        this.score += 10;
-        return;
-      }
-    }
+      // ── Button roaming ────────────────────────────────────
 
-    this.player.setTarget(wx, wy);
-  }
+      _startMoving() {
+        const btn = document.getElementById('snap-btn');
+        // Anchor to current visual position before switching to fixed
+        const rect = btn.getBoundingClientRect();
+        btn.style.left = rect.left + 'px';
+        btn.style.top  = rect.top  + 'px';
+        btn.classList.add('roaming');
+        // Small delay so browser registers the initial fixed coords first
+        setTimeout(() => this._placeSnapBtn(), 50);
+      },
 
-  resize() {
-    const dpr             = window.devicePixelRatio || 1;
-    this.W                = window.innerWidth;
-    this.H                = window.innerHeight;
-    this.canvas.width     = this.W * dpr;
-    this.canvas.height    = this.H * dpr;
-    this.canvas.style.width  = this.W + 'px';
-    this.canvas.style.height = this.H + 'px';
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.lighting.resize(this.W, this.H);
-  }
+      _placeSnapBtn() {
+        const btn         = document.getElementById('snap-btn');
+        const topPanel    = document.getElementById('bot-number').closest('.panel');
+        const bottomPanel = document.getElementById('player-number').closest('.panel');
+        const w   = btn.offsetWidth  || 200;
+        const h   = btn.offsetHeight || 72;
+        const pad = 14;
 
-  update(dt) {
-    this.elapsed += dt;
+        // Constrain Y to the gap between the two number panels
+        const safeTop    = topPanel.getBoundingClientRect().bottom + pad;
+        const safeBottom = bottomPanel.getBoundingClientRect().top - h - pad;
+        const maxX       = window.innerWidth - w - pad;
 
-    const jv = this.input.getJoystickVector();
-    if (jv) {
-      const speed = PLAYER_SPEED * dt / 16.67;
-      this.player.wx    += (jv.dx + jv.dy) * speed * 0.72;
-      this.player.wy    += (jv.dy - jv.dx) * speed * 0.72;
-      this.player.moving = true;
-      this.player.facing = Math.round(((jv.angle + Math.PI) / (Math.PI * 2)) * 8) % 8;
-      this.player.animTimer += dt;
-      if (this.player.animTimer > 95) { this.player.animFrame = (this.player.animFrame + 1) % 8; this.player.animTimer = 0; }
-    } else {
-      this.player.update(dt);
-    }
+        btn.style.left = this._randInt(pad, Math.max(pad, maxX)) + 'px';
+        btn.style.top  = this._randInt(safeTop, Math.max(safeTop, safeBottom)) + 'px';
+        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._randInt(this.MOVE_MIN, this.MOVE_MAX));
+      },
 
-    this.player.wx = Math.max(1.5, Math.min(MAP_W - 2.5, this.player.wx));
-    this.player.wy = Math.max(1.5, Math.min(MAP_H - 2.5, this.player.wy));
+      _stopMoving() {
+        clearTimeout(this._moveTimer);
+        const btn = document.getElementById('snap-btn');
+        btn.classList.remove('roaming');
+        btn.style.left = '';
+        btn.style.top  = '';
+      },
 
-    this.skeletons.forEach(sk => sk.update(dt, this.map));
-    if (this.boss) this.boss.update(dt, this.map);
-    this.sparkles.update(dt);
+      // ── Colour cycles ─────────────────────────────────────
 
-    const { sx, sy } = worldToScreen(this.player.wx, this.player.wy, 0, 0, 0, 0);
-    this.cam.x = sx; this.cam.y = sy;
-  }
+      _startColorCycles() {
+        this._cycleBotColor();
+        this._cyclePlayerColor();
+      },
 
-  render() {
-    const ctx      = this.ctx;
-    const { W, H } = this;
+      _cycleBotColor() {
+        document.getElementById('bot-number').style.color = this._pick(this._colorPalette);
+        this._botColorTimer = setTimeout(() => this._cycleBotColor(),
+          this._randInt(this.BOT_COLOR_MIN, this.BOT_COLOR_MAX));
+      },
 
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+      _cyclePlayerColor() {
+        document.getElementById('player-number').style.color = this._pick(this._colorPalette);
+        this._playerColorTimer = setTimeout(() => this._cyclePlayerColor(),
+          this._randInt(this.PLAY_COLOR_MIN, this.PLAY_COLOR_MAX));
+      },
 
-    const entities = [this.player, ...this.skeletons];
-    if (this.boss) entities.push(this.boss);
-    this.map.render(ctx, this.cam, W, H, entities, this.elapsed);
+      _stopColorCycles() {
+        clearTimeout(this._botColorTimer);
+        clearTimeout(this._playerColorTimer);
+        document.getElementById('bot-number').style.color    = '';
+        document.getElementById('player-number').style.color = '';
+      },
 
-    this.sparkles.render(ctx, this.cam, W, H);
+      // ── Helpers ───────────────────────────────────────────
 
-    this.lighting.render(ctx, this.player, this.cam, W, H);
+      showMessage(text, type) {
+        const el = document.getElementById('message');
+        clearTimeout(this._msgTimer);
+        el.textContent = text;
+        el.className = 'show ' + type;
+        this._msgTimer = setTimeout(() => { el.className = ''; }, 1100);
+      },
 
-    this.ui.render(ctx, W, H, this.score);
-    this.input.drawJoystick(ctx);
-  }
+      _showMissPop() {
+        const btn  = document.getElementById('snap-btn');
+        const rect = btn.getBoundingClientRect();
+        const el   = document.createElement('div');
+        el.className   = 'miss-pop';
+        el.textContent = this._pick(this._missWords);
+        el.style.left  = (rect.left + rect.width / 2) + 'px';
+        el.style.top   = rect.top + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 900);
+      },
 
-  start() {
-    let last = 0;
-    const loop = ts => {
-      const dt = Math.min(ts - last, 50);
-      last = ts;
-      this.update(dt);
-      this.render();
-      requestAnimationFrame(loop);
+      _updateScore() {
+        document.getElementById('score').textContent = this.score;
+      },
+
+      _setWithPulse(id, value) {
+        const el = document.getElementById(id);
+        el.textContent = value;
+        el.classList.remove('pulse', 'glow');
+        void el.offsetWidth;
+        el.classList.add('pulse');
+      },
+
+      _glowNumbers() {
+        ['bot-number', 'player-number'].forEach(id => {
+          const el = document.getElementById(id);
+          el.classList.add('glow');
+          setTimeout(() => el.classList.remove('glow'), 600);
+        });
+      },
+
+      // Immediately change both numbers so neither sits on the matched value
+      _divergeBoth() {
+        this.botNum = this._randInt(1, 100);
+        this._setWithPulse('bot-number', this.botNum);
+        do { this.playerNum = this._randInt(1, 100); } while (this.playerNum === this.botNum);
+        this._setWithPulse('player-number', this.playerNum);
+      },
+
+      _pick(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      },
+
+      _randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      },
     };
-    requestAnimationFrame(loop);
-  }
-}
-</script>
 
-<!-- Block 3: Bootstrap -->
-<script>
-const game = new Game();
-game.init();
-game.start();
-</script>
+    // Space / Enter → SNAP in-game, Play Again on result screen
+    document.addEventListener('keydown', e => {
+      if (e.repeat) return;
+      if (e.code !== 'Space' && e.code !== 'Enter') return;
+      e.preventDefault();
+      const gs = document.getElementById('game-screen');
+      const rs = document.getElementById('result-screen');
+      if (gs.style.display !== 'none') { Game.handleSnap(); return; }
+      if (rs.style.display !== 'none') { Game.goToStart(); return; }
+    });
+  </script>
 </body>
 </html>
