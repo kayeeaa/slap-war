@@ -148,3 +148,52 @@ Since the final score can be negative, `localStorage` best is now compared again
 - No difficulty levels (could vary nudge chance, number range, or score floor)
 - No sound effects (Web Audio API would be a natural addition)
 - No back-navigation to the menu hub — browser back button works but there's no explicit back link
+---
+
+## Session: 2026-05-30 - Colour-Mode Difficulty Fixes
+
+### Problem
+Hard and Extreme are presented as colour-aware modes, but the adaptive logic treated number matches as the main source of truth. Guaranteed first/safety matches only forced number matches, and the shared false-snap calculation counted number hits plus misses while ignoring successful colour snaps. That made colour performance under-sampled and could make the final 30 seconds easier or harder than the player's actual learning-phase behaviour justified.
+
+### What Changed
+
+**Colour hits now count in shared accuracy**
+`_buildPlayerProfile()` now calculates false-snap rate from number hits, colour hits, and misses. This keeps colour-mode difficulty from over-penalising players who mostly succeeded on colour opportunities.
+
+**Reaction profiling uses trimmed samples**
+Reaction averages and consistency now run through `_reactionProfile()`, which sorts samples and trims outliers when there are enough readings. This keeps one accidental very-late or ultra-fast press from skewing the post-learning difficulty.
+
+**Guaranteed matches alternate by type in colour modes**
+`_forceGuaranteedMatch()` alternates forced openings between number and colour matches for Hard/Extreme. Classic still forces number matches only.
+
+**Match openings are rate-limited**
+`MIN_MATCH_GAP` prevents a newly closed match window from immediately cascading into another natural match. Guaranteed safety openings can still bypass the cooldown so the anti-dry-spell promise remains intact.
+
+### Notes
+The menu copy now says number OR colour snap opportunities to match the implemented rules. If the intended rule becomes truly simultaneous number-plus-colour matching, that should be a future gameplay redesign rather than a wording tweak.
+
+---
+
+## Session: 2026-05-30 - Missed Match Penalty
+
+### What Changed
+Number and colour match-window expiry now counts as a miss: score decreases by 5, a miss pop appears, and the message calls out whether the player missed a number match or a colour match. During the learning phase, expired matches also increment `_learningMisses`, so the adaptive profile accounts for hesitation as well as wrong presses.
+
+### Why
+Previously, ignoring an open match had no direct consequence. Penalising expired opportunities makes the reflex challenge clearer and aligns missed windows with bad SNAP presses.
+
+---
+
+## Session: 2026-05-30 - Friendly Tamper Resistance
+
+### What Changed
+The game object is now scoped inside an IIFE instead of exposed as `window.Game`, and all inline `onclick` handlers were replaced with event listeners bound from inside that closure. This removes the easiest console cheats such as `Game.score = 9999`.
+
+**Friendly decoys**
+`window.Game` is now a playful decoy that logs teasing messages when inspected or assigned to. A `cheatCode()` function returns `FLAG{client_side_games_are_not_security_boundaries}` as a deliberate find for anyone poking around.
+
+**Wording**
+The start screen now says "Learns your pace, then turns up the pressure" because Show Time still ramps speed after calibration.
+
+### Security Note
+This is tamper resistance, not real security. A determined tester can still patch browser code, set breakpoints, alter event handlers, or edit the script at runtime because the client still owns the game logic.

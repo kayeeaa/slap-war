@@ -1,69 +1,63 @@
 # Slap War
 
-A mobile-first, snap-style number-matching browser game.
+A mobile-first snap-style browser game with adaptive difficulty.
 
 ## Concept
 
-Two numbers are shown simultaneously — a **TARGET** (top) and **YOUR NUMBER** (bottom). Both change every 2 seconds. When they match, hit **SNAP!** before the numbers change again.
+Two numbers are shown at once:
 
-- Correct snap → **+5 points**
-- Wrong snap → **-1 point** (minimum 0)
+- TARGET at the top
+- YOUR NUMBER at the bottom
 
-## Controls
+Press SNAP when a valid match appears. The first 30 seconds are a learning phase where the game measures reaction time, misses, and match accuracy. The final 30 seconds are the scored run: it starts from the player's profile, then turns up the pressure.
 
-| Action | How |
-|--------|-----|
-| Start game | Tap **Start** on the title screen |
-| Snap a match | Tap the **SNAP!** button when both numbers are equal |
+## Modes
+
+| Mode | Rule |
+| --- | --- |
+| Classic | Snap matching numbers only. |
+| Hard | Snap matching numbers or matching colours. |
+| Extreme | Hard mode plus a moving SNAP button. |
 
 ## Scoring
 
-- Open-ended arcade mode — no win/loss condition, play as long as you like
-- Score is shown in the header throughout
-- A wrong press immediately advances to the next tick so there's no spam opportunity
+- Correct snap: +5 points
+- Wrong snap: -5 points
+- Letting a number or colour match expire: -5 points
+- Learning phase score is hidden and resets to 0 when SHOW TIME starts
+- Final screen shows win/loss based on the final score
 
 ## Match Timing
 
-- Numbers change every **2 seconds**
-- Numbers are random (1–100) each tick
-- Roughly **1 in 5 ticks** will be a genuine match (20% probability, never pattern-predictable)
-- The exact timing of matches is randomised — you can never "learn the rhythm"
+- Bot and player numbers change on independent randomized timers.
+- Matches freeze briefly so the player gets a fair reaction window.
+- The first match is guaranteed within 2-6.5 seconds.
+- Safety matches prevent long dry spells.
+- In colour modes, guaranteed openings alternate between number and colour matches.
+- Match windows are rate-limited so one success cannot immediately cascade into another.
 
 ## How to Run
 
 ```bash
-npm install     # first time only
-npm start       # starts Express on port 3000
+npm install
+npm start
 ```
 
 Then visit: `http://localhost:3000/slap-war`
 
 ## File Structure
 
-```
+```text
 public/slap-war/
-├── index.html   ← entire game (HTML + CSS + JS, no external deps)
-├── README.md    ← this file
-└── MEMORY.md    ← decisions log for future sessions
+|-- index.html   # game markup and vanilla JS
+|-- style.css    # game styles
+|-- README.md    # current game overview
+`-- MEMORY.md    # decisions log for future sessions
 ```
 
 ## Tech
 
-- Pure vanilla JS, HTML, CSS — zero dependencies, zero build step
-- Single self-contained `index.html`
-- Mobile-first layout using `clamp()` for fluid type/sizing
-- CSS keyframe animation for number pulse on each tick
-- Numbers glow green on a correct snap
-
-## Architecture
-
-All game logic lives in a single plain-object `Game` in the `<script>` block:
-
-| Method | Responsibility |
-|--------|---------------|
-| `start()` | Hide title screen, show game, begin tick loop |
-| `tick()` | Pick new random numbers; decide if this tick is a match |
-| `handleSnap()` | Compare numbers, update score, show message, restart tick |
-| `showMessage()` | Display banner, auto-clear after 1 s |
-| `_renderNumbers()` | Update DOM with pulse animation |
-| `_restartTick()` | Reset interval so snap advances the clock |
+- Vanilla JS, HTML, and CSS
+- No build step
+- Express static server from the repo root
+- CSS animations for number pulses, feedback, start screen, and show-time overlay
