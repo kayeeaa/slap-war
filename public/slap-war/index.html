@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Slap War</title>
+  <!-- TODO: move score validation to server-side. Day 1 of saying this. -->
   <link rel="stylesheet" href="/slap-war/style.css" />
   <link rel="stylesheet" href="/slap-war/home.css" />
 </head>
@@ -47,6 +48,7 @@
           <span class="pill-emoji">🦄</span>
           <span class="pill-name">Classic</span>
           <span class="pill-sub">Cute & cozy pace</span>
+          <span class="pill-mobile-desc">Match the numbers · fixed button</span>
         </button>
         <button class="btn-primary btn-hard" data-mode="hard" aria-pressed="false">
           <span class="pill-tip">
@@ -58,6 +60,7 @@
           <span class="pill-emoji">💖</span>
           <span class="pill-name">Hard</span>
           <span class="pill-sub">Quick taps win</span>
+          <span class="pill-mobile-desc">Numbers or colours · two things to watch</span>
         </button>
         <button class="btn-primary btn-extreme" data-mode="extreme" aria-pressed="false">
           <span class="pill-tip">
@@ -69,6 +72,7 @@
           <span class="pill-emoji">🌈</span>
           <span class="pill-name">Extreme</span>
           <span class="pill-sub">Glitter overload</span>
+          <span class="pill-mobile-desc">Numbers, colours + moving SNAP button</span>
         </button>
       </div>
 
@@ -92,6 +96,7 @@
 
     <div id="header">
       <button id="game-back-btn" aria-label="Back to home">← Home</button>
+      <!-- score display only — real value is a closure variable, not the DOM -->
       <div id="score-display">Score: <span id="score">0</span></div>
       <div id="countdown">0:00</div>
     </div>
@@ -899,10 +904,13 @@
     }
 
     function installFriendlyTripwires() {
+
+      // ── window.Game proxy ────────────────────────────────
       const wave = [
         'Nice try. The obvious Game object has left the building.',
         'Achievement unlocked: tried window.Game first.',
         'Warmer, but this door is decorative.',
+        'You have now asked four times. We respect the persistence.',
       ];
       let peeks = 0;
 
@@ -926,12 +934,107 @@
         },
       });
 
+      // ── Common cheat property traps ──────────────────────
+      const naiveTrap = {
+        score:      'The score display is a label. The real score is a closure variable. You are yelling at a window sticker.',
+        win:        'window.win = true would be elegant. Unfortunately, no.',
+        cheat:      'window.cheat isn\'t wired up. window.cheatCode() is though. You\'re welcome.',
+        hack:       'Naming a variable "hack" in the console. Respect the commitment.',
+        godMode:    'God mode: spiritually unlocked. Practically ineffective. You feel powerful but nothing happened.',
+        debugMode:  'Debug mode is now true. Observation: you can already see everything. Congratulations on confirming that.',
+        _score:     'Getting warmer. Still wrong. The closure is laughing with you, not at you.',
+        _s:         'Thought we\'d use a single-letter secret? We thought about it and decided against it.',
+        flag:       'No flag here. window.cheatCode() though — that one is real.',
+        admin:      'window.admin? We are not a 2003 PHP login form.',
+        isMatch:    'isMatch lives in a closure. You are talking to its shadow on the wall.',
+        _endGame:   'Ooh. Now you are thinking about the right layer. Wrong surface, good instinct.',
+        speedHack:  'Already watching for timer acceleration. Thoughtful of you to announce the plan.',
+        bypass:     'No bypass property. There is a debugger panel, though. Just saying.',
+        override:   'Overriding window.override. The audacity is appreciated.',
+        secretCode: 'Not here. Have you tried window.cheatCode()?',
+        help:       'Try window.helpMe() — it is embarrassingly honest.',
+      };
+
+      for (const [name, message] of Object.entries(naiveTrap)) {
+        let hits = 0;
+        try {
+          Object.defineProperty(window, name, {
+            configurable: false,
+            enumerable:   false,
+            get() {
+              if (hits === 0) console.info('%c🔒 ' + message, 'color:#ff9800;font-weight:700');
+              else console.info('%c🔒 window.' + name + ' again. Tenacious.', 'color:#ff9800');
+              hits++;
+              return undefined;
+            },
+            set(v) {
+              console.info('%c🔒 window.' + name + ' = ' + JSON.stringify(v) + ': warmly and completely declined.', 'color:#ff9800;font-style:italic');
+            },
+          });
+        } catch (_) { /* already non-configurable, skip */ }
+      }
+
+      // ── Help easter egg (actually tells you how) ─────────
+      window.helpMe = () => {
+        console.group('%c🆘 Slap War Penetration Guide (Official, Genuine, Freely Given)', 'color:#9c27b0;font-weight:900;font-size:14px');
+        console.info('The game runs inside an IIFE. window.Game is a decoy.');
+        console.info('Step 1: Sources panel → find the inline <script> → set a breakpoint inside handleSnap or _endGame');
+        console.info('Step 2: Trigger a snap in-game to hit the breakpoint');
+        console.info('Step 3: In the Scope panel you will see the real closure — isMatch, score, _justSnapped, all of it');
+        console.info('Step 4: Edit them directly. That is the move. We can\'t stop you at that layer.');
+        console.info('Step 5: You didn\'t need my help. This is just Kay being smug about knowing how.');
+        console.groupEnd();
+        return 'Good luck. Genuinely. — Kay 💖';
+      };
+
+      // ── Score DOM integrity watch ────────────────────────
+      const scoreEl = document.getElementById('score');
+      if (scoreEl) {
+        const domWatch = new MutationObserver(() => {
+          const shown    = scoreEl.textContent;
+          const expected = Game._showTimeFired ? String(Game.score) : '--';
+          if (shown !== expected) {
+            domWatch.disconnect();
+            console.info('%c👀 DOM tampering detected on score element. Cute trick.', 'color:#e91e63;font-weight:900');
+            scoreEl.textContent = '🚩';
+            setTimeout(() => {
+              scoreEl.textContent = Game._showTimeFired ? String(Game.score) : '--';
+              domWatch.observe(scoreEl, { childList: true, characterData: true, subtree: true });
+            }, 1100);
+          }
+        });
+        domWatch.observe(scoreEl, { childList: true, characterData: true, subtree: true });
+      }
+
+      // ── Timer speed-hack detection ───────────────────────
+      const _t0 = Date.now();
+      let _ticks = 0;
+      const _speedInterval = setInterval(() => {
+        _ticks++;
+        if (Date.now() - _t0 < _ticks * 800 * 0.55) {
+          console.warn('%c⚡ Timer acceleration detected. Slap War says: slow down, it\'s a matching game, not a heist.', 'color:#ff1744;font-weight:900');
+          clearInterval(_speedInterval);
+        }
+      }, 800);
+
+      // ── Fetch trap (there is no server) ─────────────────
+      const _realFetch = window.fetch?.bind(window);
+      window.fetch = (...args) => {
+        if (/score|cheat|win|hack|flag/i.test(String(args[0] ?? ''))) {
+          console.info('%c🌐 Tried to phone a server? There is no server. This game is a glass box with a pink bow on it.', 'color:#00bcd4;font-weight:700');
+          return Promise.reject(new Error('No backend. You are phoning an empty room.'));
+        }
+        return _realFetch ? _realFetch(...args) : Promise.reject(new Error('fetch unavailable'));
+      };
+
+      // ── Cheat code + banner ──────────────────────────────
       window.cheatCode = () => {
-        console.info('Cheat code accepted: drink water, stretch wrists, continue investigation.');
+        console.info('Cheat code accepted: drink water, stretch your wrists, continue investigation.');
         return 'FLAG{client_side_games_are_not_security_boundaries}';
       };
 
-      console.info('%cSlap War security note: client-side games are made of glass. Have fun finding the cracks.', 'color:#00e5ff;font-weight:900');
+      console.info('%cSlap War — client-side games are made of glass. Have fun finding the cracks.', 'color:#00e5ff;font-weight:900');
+      console.info('%cTip: window.helpMe() if you want a nudge.', 'color:#9c27b0');
     }
 
     // ── Sparkle particles on start screen ─────────────────
