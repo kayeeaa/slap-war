@@ -226,6 +226,8 @@
       PLAY_MIN: 1700,  PLAY_MAX: 2800,
       NUDGE_CHANCE: 0.15,
       MOVE_MIN: 1800,  MOVE_MAX: 4500,
+      EXTREME_MOVE_MIN: 620,
+      EXTREME_MOVE_MAX: 1450,
       BOT_COLOR_MIN: 2500,  BOT_COLOR_MAX: 6000,
       PLAY_COLOR_MIN: 3000, PLAY_COLOR_MAX: 7000,
       FIRST_MATCH_MIN: 2000, FIRST_MATCH_MAX: 6500,
@@ -315,11 +317,11 @@
         document.getElementById('game-screen').dataset.mode = mode;
         document.getElementById('game-screen').dataset.phase = 'warmup';
         document.body.dataset.mode = mode;
-        document.getElementById('game-hint').textContent = mode === 'hard'
+        document.getElementById('game-hint').textContent = mode !== 'classic'
           ? 'Tap SNAP when the numbers or colours match ✨'
           : 'Tap SNAP when the numbers match ✨';
 
-        if (mode === 'classic' || mode === 'hard') {
+        if (['classic', 'hard', 'extreme'].includes(mode)) {
           const wo = document.getElementById('showtime-overlay');
           wo.dataset.state = 'warmup';
           wo.style.display = 'flex';
@@ -451,7 +453,7 @@
         this._updateScore();
 
         document.getElementById('game-screen').dataset.phase = 'scored';
-        if (['classic', 'hard'].includes(document.getElementById('game-screen').dataset.mode)) {
+        if (['classic', 'hard', 'extreme'].includes(document.getElementById('game-screen').dataset.mode)) {
           this._updateClassicProgress(this._duration - this._learningDuration, this._duration - this._learningDuration);
         }
         const overlay = document.getElementById('showtime-overlay');
@@ -607,7 +609,7 @@
 
       _startCountdown() {
         const tick = () => {
-          const isPhasedMode = ['classic', 'hard'].includes(document.getElementById('game-screen').dataset.mode);
+          const isPhasedMode = ['classic', 'hard', 'extreme'].includes(document.getElementById('game-screen').dataset.mode);
           if (isPhasedMode) {
             const phaseDuration = this._showTimeFired
               ? this._duration - this._learningDuration
@@ -802,17 +804,40 @@
 
       _placeSnapBtn() {
         const btn         = document.getElementById('snap-btn');
-        const topPanel    = document.getElementById('bot-number').closest('.panel');
-        const bottomPanel = document.getElementById('player-number').closest('.panel');
+        const header      = document.getElementById('header');
         const w   = btn.offsetWidth  || 200;
         const h   = btn.offsetHeight || 72;
         const pad = 14;
-        const safeTop    = topPanel.getBoundingClientRect().bottom + pad;
-        const safeBottom = bottomPanel.getBoundingClientRect().top - h - pad;
+        const safeTop    = header.getBoundingClientRect().bottom + pad;
+        const safeBottom = window.innerHeight - h - (pad * 2);
         const maxX       = window.innerWidth - w - pad;
-        btn.style.left = this._randInt(pad, Math.max(pad, maxX)) + 'px';
-        btn.style.top  = this._randInt(safeTop, Math.max(safeTop, safeBottom)) + 'px';
-        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._scaledRandInt(this.MOVE_MIN, this.MOVE_MAX));
+        const maxY       = Math.max(safeTop, safeBottom);
+        const minJump    = Math.min(window.innerWidth, window.innerHeight) * 0.32;
+        let nextX = pad;
+        let nextY = safeTop;
+        let attempts = 0;
+
+        do {
+          const zone = this._pick([
+            { x: [pad, Math.max(pad, window.innerWidth * 0.18)], y: [safeTop, Math.max(safeTop, window.innerHeight * 0.30)] },
+            { x: [Math.max(pad, window.innerWidth * 0.40), Math.max(pad, window.innerWidth * 0.58)], y: [Math.max(safeTop, window.innerHeight * 0.40), Math.max(safeTop, window.innerHeight * 0.60)] },
+            { x: [Math.max(pad, window.innerWidth * 0.76 - w), Math.max(pad, maxX)], y: [Math.max(safeTop, window.innerHeight * 0.68), maxY] },
+          ]);
+          const xMin = Math.min(zone.x[0], zone.x[1]);
+          const xMax = Math.max(zone.x[0], zone.x[1]);
+          const yMin = Math.min(zone.y[0], zone.y[1]);
+          const yMax = Math.max(zone.y[0], zone.y[1]);
+          nextX = this._randInt(Math.round(xMin), Math.round(xMax));
+          nextY = this._randInt(Math.round(yMin), Math.round(yMax));
+          attempts++;
+        } while (
+          attempts < 10 &&
+          Math.hypot(nextX - (parseFloat(btn.style.left) || 0), nextY - (parseFloat(btn.style.top) || 0)) < minJump
+        );
+
+        btn.style.left = Math.max(pad, Math.min(maxX, nextX)) + 'px';
+        btn.style.top  = Math.max(safeTop, Math.min(maxY, nextY)) + 'px';
+        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._extremeMoveDelay());
       },
 
       _stopMoving() {
@@ -830,7 +855,13 @@
       _resumeMoving() {
         if (!this._isMoving) return;
         clearTimeout(this._moveTimer);
-        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._scaledRandInt(this.MOVE_MIN, this.MOVE_MAX));
+        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._extremeMoveDelay());
+      },
+
+      _extremeMoveDelay() {
+        return this._showTimeFired
+          ? this._randInt(this.EXTREME_MOVE_MIN, this.EXTREME_MOVE_MAX)
+          : this._randInt(this.EXTREME_MOVE_MIN + 350, this.EXTREME_MOVE_MAX + 600);
       },
 
       // ── Colour cycles ─────────────────────────────────────

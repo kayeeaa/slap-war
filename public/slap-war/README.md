@@ -58,6 +58,10 @@ Classic mode uses a full pink bubblegum aesthetic:
 
 Hard mode mirrors the Classic card/button layout with a deeper purple background, frosted number panels, a circular SNAP button, warm-up/GO overlays, a 30-second phase progress bar, and a small high-contrast colour set led by pink and blue. Its visible hints and home-screen copy reference matching either numbers or colours.
 
+## Extreme Mode Visual Theme
+
+Extreme mirrors the Hard in-game layout but uses a pastel red/orange home-screen palette. It also uses the same WARM-UP/GO overlays and 30-second phase bar, while the SNAP button jumps quickly across large areas of the playable screen.
+
 ## Overlay Timing
 
 | Event | Behaviour |

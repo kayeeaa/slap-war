@@ -320,5 +320,9 @@ Seventh follow-up: in Hard and Extreme, card colours now change only when that c
 
 Eighth follow-up: successful snap feedback no longer recolours the numbers green. Number colour is a gameplay signal in Hard/Extreme, so success feedback now lives on the panels as a green border/wash while the number text keeps its current colour.
 
+Ninth follow-up: Extreme now shares the Hard/Classic-style in-game presentation path: WARM-UP overlay, GO overlay, 30-second warm-up bar, and 30-second scored bar. Its styling uses the red/orange home selection palette, and the moving SNAP button now jumps across large screen zones on a faster cadence so the mode feels intentionally difficult.
+
+Tenth follow-up: Extreme's in-game palette was softened from hot saturated red/orange to a pastel peach/coral/pink treatment so it feels closer to the home page while keeping the same mode identity and movement difficulty.
+
 ### Boundary
-Hard phase presentation now matches Classic, including the warm-up/GO overlays and 30-second displayed phase bars. Colour-match timing/input responsiveness and colour cadence were adjusted for usability. Scoring and number/colour match rules were not changed.
+Hard and Extreme phase presentation now matches Classic, including the warm-up/GO overlays and 30-second displayed phase bars. Colour-match timing/input responsiveness, colour cadence, and Extreme button movement were adjusted for usability/difficulty. Scoring and number/colour match rules were not changed.
