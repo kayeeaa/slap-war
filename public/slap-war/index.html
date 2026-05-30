@@ -174,8 +174,9 @@
       _colorLearningSamples: [],
       _colorLearningWindows: 0,
       _colorMatchOpenTime: 0,
-      // Accuracy tracking (shared — false snaps aren't match-type-specific)
-      _learningMisses: 0,
+      // Accuracy tracking (shared — neither miss type is match-type-specific)
+      _expiredWindows: 0,  // match opened but player didn't press in time
+      _falseSnaps: 0,      // player pressed when no match was active
       // Show time
       _showTimeFired: false,
       _showTimeTimer: null,
@@ -296,7 +297,8 @@
         this._colorLearningSamples   = [];
         this._colorLearningWindows   = 0;
         this._colorMatchOpenTime     = 0;
-        this._learningMisses         = 0;
+        this._expiredWindows         = 0;
+        this._falseSnaps             = 0;
         this._showTimeFired          = false;
         this._gamePlanStartTime      = 0;
         this._matchWindow            = 1000;
@@ -509,11 +511,13 @@
       },
 
       _buildPlayerProfile() {
-        // ── Shared: false snap rate (0 = never guesses, 1 = all guesses) ──
+        // ── False snap rate: of all presses, what fraction were wrong guesses? ──
+        // Expired windows are NOT counted as presses — they are the absence of pressing,
+        // already captured in hitRate via (_learningWindows - hits).
         const successfulPresses = this._learningSamples.length + this._colorLearningSamples.length;
-        const totalPresses  = successfulPresses + this._learningMisses;
+        const totalPresses  = successfulPresses + this._falseSnaps;
         const falseSnapRate = totalPresses > 0
-          ? this._learningMisses / totalPresses : 0.2;
+          ? this._falseSnaps / totalPresses : 0.2;
 
         // ── Number match profile ──
         const hits    = this._learningSamples.length;
@@ -1029,7 +1033,10 @@
       },
 
       _recordMiss(showExpiredMatchMessage = false) {
-        if (!this._showTimeFired) this._learningMisses++;
+        if (!this._showTimeFired) {
+          if (showExpiredMatchMessage) this._expiredWindows++;
+          else                        this._falseSnaps++;
+        }
         this._flashPanels('snap-miss');
         this.score -= 5;
         this._updateScore();
