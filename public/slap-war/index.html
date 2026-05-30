@@ -11,11 +11,24 @@
   <!-- ── Start screen ── -->
   <div id="start-screen" class="screen">
     <h1>SNAP</h1>
-    <p>Select your mode</p>
+    <div class="start-tagline">💖 Beat yourself! 💖</div>
+    <p class="start-desc">
+      30 seconds learning &nbsp;·&nbsp; 30 seconds play<br>
+      <em>Adapts completely to your ability</em>
+    </p>
     <div class="time-options">
-      <button class="btn-primary btn-classic" onclick="Game.start('classic')">CLASSIC</button>
-      <button class="btn-primary btn-hard" onclick="Game.start('hard')">HARD</button>
-      <button class="btn-primary btn-extreme" onclick="Game.start('extreme')">EXTREME</button>
+      <div class="mode-wrap">
+        <button class="btn-primary btn-classic" onclick="Game.start('classic')">🎀 CLASSIC</button>
+        <div class="mode-tip">Numbers only · Fixed button · Pure reflex 🌸</div>
+      </div>
+      <div class="mode-wrap">
+        <button class="btn-primary btn-hard" onclick="Game.start('hard')">💅 HARD</button>
+        <div class="mode-tip">Match numbers AND colours · Double the trouble 💎</div>
+      </div>
+      <div class="mode-wrap">
+        <button class="btn-primary btn-extreme" onclick="Game.start('extreme')">🦄 EXTREME</button>
+        <div class="mode-tip">Numbers + colours + moving button · Total chaos 💀</div>
+      </div>
     </div>
   </div>
 
@@ -725,6 +738,22 @@
       },
     };
 
+    // ── Sparkle particles on start screen ─────────────────
+    (function spawnSparkles() {
+      const screen  = document.getElementById('start-screen');
+      const symbols = ['✨','💖','🌸','💎','🦄','⭐','💫','🎀','🍭','💜','🌟','🩷','🪄','🍬','🫧'];
+      for (let i = 0; i < 22; i++) {
+        const el = document.createElement('span');
+        el.className   = 'sparkle';
+        el.textContent = symbols[i % symbols.length];
+        el.style.left              = (Math.random() * 96) + '%';
+        el.style.top               = (5 + Math.random() * 88) + '%';
+        el.style.fontSize          = (0.65 + Math.random() * 1.15) + 'rem';
+        el.style.animationDuration = (3.5 + Math.random() * 5.5) + 's';
+        el.style.animationDelay    = (-Math.random() * 8) + 's';
+        screen.appendChild(el);
+      }
+    })();
   </script>
 </body>
 </html>

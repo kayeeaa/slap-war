@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@600;800;900&display=swap');
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -32,21 +34,33 @@ html, body {
 }
 
 #start-screen {
-  gap: 2rem;
-  padding: 2rem;
+  gap: 1.4rem;
+  padding: 2rem 1.5rem;
   text-align: center;
+  background: linear-gradient(135deg, #ff4db8, #9b35e8, #ff4db8, #ff85d0);
+  background-size: 300% 300%;
+  animation: bg-shimmer 7s ease infinite;
+  overflow: hidden;
 }
 
 #start-screen h1 {
-  font-size: clamp(3.5rem, 20vw, 7rem);
-  font-weight: 900;
-  letter-spacing: -2px;
-  color: var(--accent);
+  font-family: 'Pacifico', cursive;
+  font-size: clamp(3.8rem, 20vw, 7.5rem);
+  font-weight: 400;
+  letter-spacing: 4px;
+  background: linear-gradient(120deg, #fff 0%, #ffd6f5 25%, #ffd700 55%, #fff 80%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-shine 3s linear infinite;
+  filter: drop-shadow(0 0 18px rgba(255, 80, 200, 0.7));
 }
 
 #start-screen p {
-  font-size: clamp(0.95rem, 4vw, 1.2rem);
-  color: var(--muted);
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.9rem, 3.8vw, 1.05rem);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .time-options {
@@ -337,4 +351,168 @@ html, body {
 @keyframes showtime-pulse {
   from { transform: scale(1);    text-shadow: 0 0 30px rgba(74,144,217,0.8); }
   to   { transform: scale(1.06); text-shadow: 0 0 60px rgba(74,144,217,1), 0 0 120px rgba(74,144,217,0.5); }
+}
+
+/* ══════════════════════════════════════════════════════
+   ✨ GIRLY START SCREEN THEME ✨
+   All rules below are scoped to #start-screen so the
+   game screen is completely untouched.
+   ══════════════════════════════════════════════════════ */
+
+@keyframes bg-shimmer {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+@keyframes text-shine {
+  from { background-position: 220% center; }
+  to   { background-position: 0%   center; }
+}
+
+/* ── Tagline ─────────────────────────────────────────── */
+
+.start-tagline {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(1.3rem, 6vw, 1.8rem);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 16px rgba(220, 0, 160, 0.55),
+               0 0 40px rgba(255, 200, 240, 0.4);
+  letter-spacing: 1px;
+}
+
+/* ── Description card ────────────────────────────────── */
+
+.start-desc {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.85rem, 3.5vw, 1rem) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  line-height: 1.9;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 22px;
+  padding: 0.8rem 1.6rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.start-desc em {
+  font-style: normal;
+  color: #ffd6f0;
+  font-weight: 800;
+}
+
+/* ── Mode wrappers + tooltips ────────────────────────── */
+
+.mode-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.mode-tip {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.75rem, 3vw, 0.88rem);
+  font-weight: 700;
+  color: #fff;
+  background: rgba(140, 0, 100, 0.65);
+  border: 1.5px solid rgba(255, 180, 230, 0.4);
+  border-radius: 14px;
+  padding: 0.4rem 1.1rem;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease, max-height 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.mode-wrap:hover .mode-tip,
+.mode-wrap:focus-within .mode-tip {
+  max-height: 3rem;
+  opacity: 1;
+}
+
+/* ── Start screen button overrides ───────────────────── */
+
+#start-screen .btn-primary {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  letter-spacing: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  width: clamp(200px, 62vw, 280px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shine sweep on hover */
+#start-screen .btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -60%; left: -80%;
+  width: 55%; height: 220%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent);
+  transform: skewX(-20deg);
+  transition: left 0.55s ease;
+  pointer-events: none;
+}
+
+#start-screen .btn-primary:hover::after {
+  left: 130%;
+}
+
+#start-screen .btn-primary:hover {
+  transform: scale(1.05) translateY(-2px);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#start-screen .btn-classic {
+  background: linear-gradient(135deg, #f472b6, #a855f7);
+  box-shadow: 0 4px 22px rgba(244, 114, 182, 0.65),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+#start-screen .btn-hard {
+  background: linear-gradient(135deg, #fb7185, #f43f5e);
+  box-shadow: 0 4px 22px rgba(251, 113, 133, 0.65),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+#start-screen .btn-extreme {
+  background: linear-gradient(135deg, #c084fc, #7c3aed);
+  box-shadow: 0 4px 22px rgba(192, 132, 252, 0.65),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ── Floating sparkle particles ──────────────────────── */
+
+.sparkle {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  animation: sparkle-drift linear infinite;
+  opacity: 0;
+}
+
+@keyframes sparkle-drift {
+  0%   { opacity: 0;   transform: translateY(0)      rotate(0deg)   scale(0.6); }
+  15%  { opacity: 0.85; }
+  85%  { opacity: 0.85; }
+  100% { opacity: 0;   transform: translateY(-110px) rotate(540deg) scale(1.1); }
+}
+
+/* Keep content above sparkles */
+#start-screen > *:not(.sparkle) {
+  position: relative;
+  z-index: 1;
 }
