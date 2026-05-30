@@ -163,6 +163,7 @@
       _duration: 0,
       _isExtreme: false,
       _isMoving: false,
+      _numMax: 100,
 
       // Learning phase
       _learningDuration: 30000,
@@ -290,6 +291,7 @@
         this._isExtreme = mode !== 'classic'; // colour matching: hard + extreme
         this._isMoving  = mode === 'extreme'; // moving button: extreme only
         this._duration  = 60000;
+        this._numMax    = mode === 'extreme' ? 20 : mode === 'hard' ? 50 : 100;
 
         this._learningSamples        = [];
         this._learningWindows        = 0;
@@ -352,8 +354,8 @@
         this._updateScore();
         document.getElementById('snap-btn').disabled = false;
 
-        this.botNum = this._randInt(1, 100);
-        do { this.playerNum = this._randInt(1, 100); } while (this.playerNum === this.botNum);
+        this.botNum = this._randInt(1, this._numMax);
+        do { this.playerNum = this._randInt(1, this._numMax); } while (this.playerNum === this.botNum);
         this._setWithPulse('bot-number',    this.botNum);
         this._setWithPulse('player-number', this.playerNum);
 
@@ -593,9 +595,9 @@
         const matchColor = this._playerColor === this._lastMatchColor
           ? this._pick(this._activeColorPalette.filter(color => color !== this._lastMatchColor))
           : this._playerColor;
-        this.botNum = this._randInt(1, 100);
+        this.botNum = this._randInt(1, this._numMax);
         this._setWithPulse('bot-number', this.botNum);
-        do { this.playerNum = this._randInt(1, 100); } while (this.playerNum === this.botNum);
+        do { this.playerNum = this._randInt(1, this._numMax); } while (this.playerNum === this.botNum);
         this._setWithPulse('player-number', this.playerNum);
         this._botColor = matchColor;
         this._playerColor = matchColor;
@@ -678,7 +680,7 @@
       _scheduleBotChange() {
         this._botTimer = setTimeout(() => {
           const nudge = this._showTimeFired ? this.NUDGE_CHANCE : 0.25;
-          this.botNum = Math.random() < nudge ? this.playerNum : this._randInt(1, 100);
+          this.botNum = Math.random() < nudge ? this.playerNum : this._randInt(1, this._numMax);
           this._setWithPulse('bot-number', this.botNum);
           if (this._isExtreme) this._cycleBotColor();
           this._checkMatch();
@@ -689,7 +691,7 @@
 
       _schedulePlayerChange() {
         this._playerTimer = setTimeout(() => {
-          this.playerNum = this._randInt(1, 100);
+          this.playerNum = this._randInt(1, this._numMax);
           this._setWithPulse('player-number', this.playerNum);
           if (this._isExtreme) this._cyclePlayerColor();
           this._checkMatch();
@@ -1082,9 +1084,9 @@
       },
 
       _divergeBoth() {
-        this.botNum = this._randInt(1, 100);
+        this.botNum = this._randInt(1, this._numMax);
         this._setWithPulse('bot-number', this.botNum);
-        do { this.playerNum = this._randInt(1, 100); } while (this.playerNum === this.botNum);
+        do { this.playerNum = this._randInt(1, this._numMax); } while (this.playerNum === this.botNum);
         this._setWithPulse('player-number', this.playerNum);
         if (this._isExtreme) {
           this._cycleBotColor(true);
