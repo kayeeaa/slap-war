@@ -198,6 +198,8 @@ public/
 ├── index.html            → instant redirect to /menu/
 ├── menu/index.html       → hub page
 ├── slap-war/index.html   → game
+│   ├── slap-war/style.css    → shared + game-screen styles
+│   └── slap-war/home.css     → home/start-screen styles (Fonts, pills, tooltips, clouds)
 ├── js/
 │   ├── supabase-config.example.js   ← commit this
 │   ├── supabase-config.js           ← DO NOT COMMIT (gitignored)

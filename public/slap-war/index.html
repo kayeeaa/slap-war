@@ -5,35 +5,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Slap War</title>
   <link rel="stylesheet" href="/slap-war/style.css" />
+  <link rel="stylesheet" href="/slap-war/home.css" />
 </head>
 <body>
 
   <!-- ── Start screen ── -->
   <div id="start-screen" class="screen">
-    <h1>SNAP</h1>
-    <div class="start-tagline">💖 Beat yourself! 💖</div>
-    <p class="start-desc">
-      30 seconds learning &nbsp;·&nbsp; 30 seconds play<br>
-      <em>Learns your pace, then turns up the pressure</em>
-    </p>
-    <div class="time-options">
-      <div class="mode-wrap">
-        <button class="btn-primary btn-classic" data-mode="classic">🎀 CLASSIC</button>
-        <div class="mode-tip">Numbers only · Fixed button · Pure reflex 🌸</div>
+    <div class="home-chaos-bg"></div>
+    <div class="home-decor">
+      <div class="home-rainbow home-rainbow--tl"></div>
+      <div class="home-rainbow home-rainbow--tr"></div>
+    </div>
+    <div class="home-clouds" id="home-clouds"></div>
+
+    <div class="home-stage">
+      <div class="home-crown">👑</div>
+      <div class="home-title-wrap">
+        <h1>SNAP!</h1>
       </div>
-      <div class="mode-wrap">
-        <button class="btn-primary btn-hard" data-mode="hard">💅 HARD</button>
-        <div class="mode-tip">Match numbers OR colours · Double the trouble 💎</div>
+      <p class="home-tagline">
+        <span>✦</span> the sparkliest matching in all of the land <span>✦</span>
+      </p>
+
+      <div class="home-format">
+        <span>🎓 30s warm-up - it reads your reactions</span>
+        <b>→</b>
+        <span>⚡ 30s scored - beat your own ability</span>
+        <em>+5 hit · -5 miss · win above 0</em>
       </div>
-      <div class="mode-wrap">
-        <button class="btn-primary btn-extreme" data-mode="extreme">🦄 EXTREME</button>
-        <div class="mode-tip">Numbers or colours + moving button · Total chaos 💀</div>
+
+      <p class="picker-label">Choose your difficulty</p>
+
+      <div class="time-options">
+        <button class="btn-primary btn-classic" data-mode="classic" aria-pressed="false">
+          <span class="pill-tip">
+            <span class="pill-tip-close" aria-label="Close tooltip">×</span>
+            <span class="tip-head">🦄 Classic</span>
+            <span class="tip-body">Match the numbers. Fixed button, clean reflex snapping.</span>
+            <span class="tip-tags"><span>🔢 Numbers</span></span>
+          </span>
+          <span class="pill-emoji">🦄</span>
+          <span class="pill-name">Classic</span>
+          <span class="pill-sub">Cute & cozy pace</span>
+        </button>
+        <button class="btn-primary btn-hard" data-mode="hard" aria-pressed="false">
+          <span class="pill-tip">
+            <span class="pill-tip-close" aria-label="Close tooltip">×</span>
+            <span class="tip-head">💖 Hard</span>
+            <span class="tip-body">Snap number matches or colour matches. Two things to watch.</span>
+            <span class="tip-tags"><span>🔢 Numbers</span><span>🎨 Colours</span></span>
+          </span>
+          <span class="pill-emoji">💖</span>
+          <span class="pill-name">Hard</span>
+          <span class="pill-sub">Quick taps win</span>
+        </button>
+        <button class="btn-primary btn-extreme" data-mode="extreme" aria-pressed="false">
+          <span class="pill-tip">
+            <span class="pill-tip-close" aria-label="Close tooltip">×</span>
+            <span class="tip-head">🌈 Extreme</span>
+            <span class="tip-body">Numbers, colours, and a roaming SNAP button. Full sparkle chaos.</span>
+            <span class="tip-tags"><span>🔢 Numbers</span><span>🎨 Colours</span><span>🏃 Moving SNAP</span></span>
+          </span>
+          <span class="pill-emoji">🌈</span>
+          <span class="pill-name">Extreme</span>
+          <span class="pill-sub">Glitter overload</span>
+        </button>
       </div>
+
+      <button class="home-play" id="home-play-btn" disabled>
+        <span class="shine"></span>
+        PLAY
+        <span class="play-spark">✨</span>
+      </button>
     </div>
   </div>
 
   <!-- ── Result screen ── -->
-  <div id="result-screen" class="screen" style="display:none">
+  <div id="result-screen" class="screen">
     <h1 id="result-heading"></h1>
     <p>You scored <strong id="final-score">0</strong></p>
     <button class="btn-primary" id="play-again-btn">Play Again</button>
@@ -43,6 +91,7 @@
   <div id="game-screen" class="screen">
 
     <div id="header">
+      <button id="game-back-btn" aria-label="Back to home">← Home</button>
       <div id="score-display">Score: <span id="score">0</span></div>
       <div id="countdown">0:00</div>
     </div>
@@ -250,7 +299,28 @@
         document.getElementById('start-screen').style.display  = '';
       },
 
+      backToHome() {
+        this._stopRun();
+        document.getElementById('game-screen').style.display   = 'none';
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display  = '';
+      },
+
       _endGame() {
+        this._stopRun();
+
+        const won = this.score > 0;
+        const heading = document.getElementById('result-heading');
+        heading.textContent = won ? 'YOU WIN!' : 'YOU LOST';
+        heading.className   = won ? 'win' : 'lose';
+
+        document.getElementById('final-score').textContent = this.score;
+
+        document.getElementById('game-screen').style.display   = 'none';
+        document.getElementById('result-screen').style.display = 'flex';
+      },
+
+      _stopRun() {
         clearTimeout(this._botTimer);
         clearTimeout(this._playerTimer);
         clearTimeout(this._matchWindowTimer);
@@ -266,13 +336,6 @@
         this._stopColorCycles();
         document.getElementById('showtime-overlay').style.display = 'none';
 
-        const won = this.score > 0;
-        const heading = document.getElementById('result-heading');
-        heading.textContent = won ? 'YOU WIN!' : 'YOU LOST';
-        heading.className   = won ? 'win' : 'lose';
-
-        document.getElementById('final-score').textContent = this.score;
-
         this.isMatch       = false;
         this._isColorMatch = false;
         this._justSnapped  = false;
@@ -281,9 +344,6 @@
         document.getElementById('player-number').textContent = '--';
         document.getElementById('message').className         = '';
         document.getElementById('snap-btn').disabled         = false;
-
-        document.getElementById('game-screen').style.display   = 'none';
-        document.getElementById('result-screen').style.display = '';
       },
 
       // ── Learning → Show Time ──────────────────────────────
@@ -788,11 +848,39 @@
       },
     };
 
+    let selectedMode = '';
+
     function bindControls() {
+      const startScreen = document.getElementById('start-screen');
+      const modeButtons = document.querySelectorAll('[data-mode]');
+
+      function selectMode(mode) {
+        selectedMode = mode;
+        startScreen.classList.toggle('mode-hard', mode === 'hard');
+        startScreen.classList.toggle('mode-extreme', mode === 'extreme');
+        modeButtons.forEach(button => {
+          const isSelected = button.dataset.mode === mode;
+          button.classList.toggle('selected', isSelected);
+          button.setAttribute('aria-pressed', String(isSelected));
+        });
+        document.getElementById('home-play-btn').disabled = !selectedMode;
+      }
+
       document.querySelectorAll('[data-mode]').forEach(button => {
-        button.addEventListener('click', () => Game.start(button.dataset.mode));
+        button.addEventListener('click', () => selectMode(button.dataset.mode));
       });
 
+      document.querySelectorAll('.pill-tip-close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          closeBtn.closest('.btn-primary').blur();
+        });
+      });
+
+      document.getElementById('home-play-btn').addEventListener('click', () => {
+        if (selectedMode) Game.start(selectedMode);
+      });
+      document.getElementById('game-back-btn').addEventListener('click', () => Game.backToHome());
       document.getElementById('play-again-btn').addEventListener('click', () => Game.goToStart());
       document.getElementById('snap-btn').addEventListener('click', () => Game.handleSnap());
 
@@ -804,8 +892,8 @@
           Game.handleSnap();
         } else if (document.getElementById('result-screen').style.display !== 'none') {
           Game.goToStart();
-        } else {
-          document.querySelector('[data-mode="classic"]')?.click();
+        } else if (selectedMode) {
+          Game.start(selectedMode);
         }
       });
     }
@@ -850,17 +938,34 @@
     (function spawnSparkles() {
       const screen  = document.getElementById('start-screen');
       const symbols = ['✨','💖','🌸','💎','🦄','⭐','💫','🎀','🍭','💜','🌟','🩷','🪄','🍬','🫧'];
-      for (let i = 0; i < 22; i++) {
+      for (let i = 0; i < 16; i++) {
         const el = document.createElement('span');
         el.className   = 'sparkle';
         el.textContent = symbols[i % symbols.length];
-        el.style.left              = (Math.random() * 96) + '%';
+        el.style.left              = (2 + Math.random() * 94) + '%';
         el.style.top               = (5 + Math.random() * 88) + '%';
-        el.style.fontSize          = (0.65 + Math.random() * 1.15) + 'rem';
-        el.style.animationDuration = (3.5 + Math.random() * 5.5) + 's';
-        el.style.animationDelay    = (-Math.random() * 8) + 's';
+        el.style.fontSize          = (14 + Math.random() * 28) + 'px';
+        const dur = 1.8 + Math.random() * 2.6;
+        const delay = Math.random() * 4;
+        el.style.animationDuration = dur + 's';
+        el.style.animationDelay    = delay + 's';
         screen.appendChild(el);
       }
+    })();
+
+    // ── Ground clouds ──────────────────────────────────────
+    (function spawnClouds() {
+      const container = document.getElementById('home-clouds');
+      if (!container) return;
+      let html = '';
+      const blobs = 14;
+      for (let i = 0; i < blobs; i++) {
+        const w = 120 + Math.random() * 260;
+        const x = (i / blobs) * 100 + (Math.random() * 6 - 3);
+        const lift = Math.random() * 7;
+        html += `<div class="home-cloud" style="width:${w}px;height:${w}px;left:${x}vw;bottom:${-8 + lift}vh"></div>`;
+      }
+      container.innerHTML = html;
     })();
     bindControls();
     installFriendlyTripwires();

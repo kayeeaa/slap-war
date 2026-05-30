@@ -197,3 +197,53 @@ The start screen now says "Learns your pace, then turns up the pressure" because
 
 ### Security Note
 This is tamper resistance, not real security. A determined tester can still patch browser code, set breakpoints, alter event handlers, or edit the script at runtime because the client still owns the game logic.
+
+---
+
+## Session: 2026-05-30 - Snap Home Styling Import
+
+### What Changed
+The start screen was restyled to match the downloaded `Snap Home (standalone).html` page: crown/title treatment, pink rainbow background, cloud base, format banner, and rounded difficulty pills.
+
+### Boundary
+Only the home/start-screen markup and CSS were changed. The mode buttons still use the same `data-mode` event listener path into `Game.start(mode)`, and no gameplay timers, scoring logic, match logic, or tamper-resistance logic were changed.
+
+---
+
+## Session: 2026-05-30 - Home Mode Selection Flow
+
+### What Changed
+The home screen now matches the standalone Snap Home flow more closely: difficulty pills select a mode and update the background colour wash, while a separate PLAY button starts the selected mode. Classic is selected by default.
+
+### Boundary
+This changes only the start-screen interaction flow. `Game.start(mode)` still receives the same mode ids (`classic`, `hard`, `extreme`), and no in-game scoring, timers, or match rules were changed.
+
+---
+
+## Session: 2026-05-30 - Difficulty Highlight Bubbles
+
+### What Changed
+Difficulty pills now include hover/focus/selected highlight bubbles explaining each mode, matching the standalone Snap Home design direction. The bubbles describe Classic, Hard, and Extreme without changing the mode ids or gameplay behaviour.
+
+### Follow-Up
+The home screen no longer defaults to Classic. PLAY is disabled until the player selects a mode, and difficulty descriptions now show only on hover/focus rather than staying visible for the selected mode.
+
+---
+
+## Session: 2026-05-30 - In-Game Home Button
+
+### What Changed
+The game header now includes a Home button. It stops the active run, clears all game timers, hides any overlays, resets the number/message display, and returns to the start screen without showing the result screen.
+
+### Implementation Note
+The previous `_endGame()` cleanup block was split into `_stopRun()` so both normal game end and manual home navigation share the same timer cleanup path.
+
+---
+
+## Session: 2026-05-30 - Home Decoration Cleanup
+
+### What Changed
+The old random emoji sparkle background was disabled. The home page now relies on the deliberate top rainbows and bottom cloud layer from the Snap Home design, with z-index overrides so those decorative layers sit behind the home content.
+
+### Follow-Up
+The decoration selectors were strengthened to `#start-screen .home-*` because an older `#start-screen > *:not(.sparkle)` rule had enough specificity to override `position: fixed` on the rainbow/cloud layers.

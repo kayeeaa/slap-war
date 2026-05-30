@@ -50,10 +50,13 @@ Then visit: `http://localhost:3000/slap-war`
 ```text
 public/slap-war/
 |-- index.html   # game markup and vanilla JS
-|-- style.css    # game styles
+|-- style.css    # shared + game-screen styles only (reset, :root vars, #game-screen, #result-screen, snap button, panels)
+|-- home.css     # home/start-screen styles (Google Fonts @import, #start-screen, pill buttons, tooltips, clouds, rainbows, sparkles)
 |-- README.md    # current game overview
 `-- MEMORY.md    # decisions log for future sessions
 ```
+
+> **Styling rule**: all CSS lives in the CSS files above. Do not add `style="..."` attributes or `<style>` blocks to `index.html` except for truly dynamic per-element values set by JS (e.g. `left`/`top` on JS-generated decorative elements). If a new game mode needs its own visual theme, create a new CSS file for it.
 
 ## Tech
 
