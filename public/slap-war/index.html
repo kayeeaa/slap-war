@@ -58,6 +58,13 @@
 
   </div>
 
+  <!-- ── Show-time overlay ── -->
+  <div id="showtime-overlay">
+    <div id="showtime-inner">
+      <div id="showtime-label">SHOW TIME!</div>
+    </div>
+  </div>
+
   <script>
     const Game = {
       score: 0,
@@ -68,6 +75,17 @@
       _peakScore: 0,
       _gameStartTime: 0,
       _duration: 0,
+
+      // Learning phase
+      _learningDuration: 30000,
+      _learningSamples: [],   // reaction times (ms) for hits during learning
+      _learningWindows: 0,    // total match windows opened during learning
+      _matchOpenTime: 0,      // when the current match window opened
+      _showTimeFired: false,
+      _showTimeTimer: null,
+      _gamePlanStartTime: 0,
+      _matchWindow: 1000,     // active window; generous during learning, personalised after
+      _playerStartFactor: 1.0,
 
       // Number timers
       _botTimer: null,
@@ -93,7 +111,6 @@
 
       BOT_MIN: 1500,   BOT_MAX: 2500,
       PLAY_MIN: 1700,  PLAY_MAX: 2800,
-      MATCH_WINDOW: 800,
       NUDGE_CHANCE: 0.15,
       MOVE_MIN: 1800,  MOVE_MAX: 4500,
       BOT_COLOR_MIN: 2500,  BOT_COLOR_MAX: 6000,
@@ -132,6 +149,15 @@
       start(durationSeconds) {
         this._duration = durationSeconds * 1000;
 
+        // Reset learning state
+        this._learningSamples = [];
+        this._learningWindows = 0;
+        this._matchOpenTime = 0;
+        this._showTimeFired = false;
+        this._gamePlanStartTime = 0;
+        this._matchWindow = 1000;
+        this._playerStartFactor = 1.0;
+
         document.getElementById('start-screen').style.display  = 'none';
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('game-screen').style.display   = 'flex';
@@ -155,7 +181,8 @@
         this._scheduleFirstMatch();
         this._resetSafetyTimer();
         this._startCountdown();
-        this._gameEndTimer = setTimeout(() => this._endGame(), this._duration);
+        this._showTimeTimer = setTimeout(() => this._triggerShowTime(), this._learningDuration);
+        this._gameEndTimer  = setTimeout(() => this._endGame(), this._duration);
       },
 
       goToStart() {
@@ -171,10 +198,12 @@
         clearTimeout(this._greedyTimer);
         clearTimeout(this._firstMatchTimer);
         clearTimeout(this._safetyTimer);
+        clearTimeout(this._showTimeTimer);
         clearTimeout(this._gameEndTimer);
         this._stopCountdown();
         this._stopMoving();
         this._stopColorCycles();
+        document.getElementById('showtime-overlay').style.display = 'none';
 
         const best = parseInt(localStorage.getItem('slapwar-best') || '0', 10);
         if (this._peakScore > best) localStorage.setItem('slapwar-best', this._peakScore);
@@ -196,8 +225,48 @@
         document.getElementById('message').className         = '';
         document.getElementById('snap-btn').disabled         = false;
 
-        document.getElementById('game-screen').style.display  = 'none';
+        document.getElementById('game-screen').style.display   = 'none';
         document.getElementById('result-screen').style.display = '';
+      },
+
+      // ── Learning → Show Time ──────────────────────────────
+
+      _triggerShowTime() {
+        // Close any open match cleanly before switching modes
+        if (this.isMatch) {
+          clearTimeout(this._matchWindowTimer);
+          this.isMatch = false;
+          this._matchOpenTime = 0;
+          this._divergeBoth();
+          this._scheduleBotChange();
+          this._schedulePlayerChange();
+        }
+
+        this._buildPlayerProfile();
+        this._showTimeFired = true;
+        this._gamePlanStartTime = Date.now();
+
+        const overlay = document.getElementById('showtime-overlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => { overlay.style.display = 'none'; }, 1800);
+      },
+
+      _buildPlayerProfile() {
+        const hitCount = this._learningSamples.length;
+        const hitRate  = this._learningWindows > 0 ? hitCount / this._learningWindows : 0.5;
+        const avgReaction = hitCount > 0
+          ? this._learningSamples.reduce((a, b) => a + b, 0) / hitCount
+          : 450;
+
+        // difficulty: 0 = player is elite, 1 = player is struggling
+        const reactionNorm = Math.max(0, Math.min(1, (avgReaction - 150) / 600));
+        const missNorm     = 1 - hitRate;
+        const difficulty   = (reactionNorm + missNorm) / 2;
+
+        // Elite player: tight 480ms window, fast 0.50 start factor
+        // Struggling player: generous 1050ms window, comfortable 0.85 start factor
+        this._matchWindow       = Math.round(480 + difficulty * 570);
+        this._playerStartFactor = 0.50 + difficulty * 0.35;
       },
 
       // ── Match guarantees ──────────────────────────────────
@@ -227,12 +296,14 @@
         }, this.SAFETY_WINDOW);
       },
 
-      // ── Speed ramp (tied to selected duration) ────────────
+      // ── Speed ramp ────────────────────────────────────────
 
       _speedFactor() {
-        const elapsed = Date.now() - this._gameStartTime;
-        const t = Math.min(elapsed / this._duration, 1);
-        return 1.0 - t * (1.0 - this.SPEED_MIN_FACTOR);
+        if (!this._showTimeFired) return 1.0; // comfortable and flat during learning
+        const elapsed        = Date.now() - this._gamePlanStartTime;
+        const gamePlanDuration = this._duration - this._learningDuration;
+        const t = Math.min(elapsed / gamePlanDuration, 1);
+        return this._playerStartFactor - t * (this._playerStartFactor - this.SPEED_MIN_FACTOR);
       },
 
       _scaledRandInt(min, max) {
@@ -262,9 +333,9 @@
 
       _scheduleBotChange() {
         this._botTimer = setTimeout(() => {
-          this.botNum = Math.random() < this.NUDGE_CHANCE
-            ? this.playerNum
-            : this._randInt(1, 100);
+          // Higher nudge chance during learning for more match opportunities = more data
+          const nudge = this._showTimeFired ? this.NUDGE_CHANCE : 0.25;
+          this.botNum = Math.random() < nudge ? this.playerNum : this._randInt(1, 100);
           this._setWithPulse('bot-number', this.botNum);
           this._checkMatch();
           if (!this.isMatch) this._scheduleBotChange();
@@ -289,13 +360,16 @@
         clearTimeout(this._firstMatchTimer);
         this._resetSafetyTimer();
         this.isMatch = true;
+        this._matchOpenTime = Date.now();
+        if (!this._showTimeFired) this._learningWindows++;
 
         this._matchWindowTimer = setTimeout(() => {
           this.isMatch = false;
+          this._matchOpenTime = 0;
           this._divergeBoth();
           this._scheduleBotChange();
           this._schedulePlayerChange();
-        }, this.MATCH_WINDOW);
+        }, this._matchWindow);
       },
 
       // ── Player action ─────────────────────────────────────
@@ -307,6 +381,12 @@
         }
 
         if (this.isMatch) {
+          // Silently record reaction time during learning phase
+          if (!this._showTimeFired && this._matchOpenTime > 0) {
+            this._learningSamples.push(Date.now() - this._matchOpenTime);
+          }
+          this._matchOpenTime = 0;
+
           this.isMatch = false;
           clearTimeout(this._matchWindowTimer);
           this.score += 5;
@@ -318,7 +398,7 @@
 
           this._justSnapped = true;
           clearTimeout(this._greedyTimer);
-          this._greedyTimer = setTimeout(() => { this._justSnapped = false; }, this.MATCH_WINDOW);
+          this._greedyTimer = setTimeout(() => { this._justSnapped = false; }, this._matchWindow);
 
           this._scheduleBotChange();
           this._schedulePlayerChange();

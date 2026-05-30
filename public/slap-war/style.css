@@ -278,3 +278,38 @@ html, body {
   height: 1px;
   background: rgba(74, 144, 217, 0.15);
 }
+
+/* ── Show-time overlay ───────────────────────────────── */
+
+#showtime-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 20, 0.93);
+  z-index: 999;
+  animation: showtime-fade-in 0.25s ease-out;
+}
+
+@keyframes showtime-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#showtime-label {
+  font-size: clamp(3rem, 18vw, 6rem);
+  font-weight: 900;
+  letter-spacing: -2px;
+  color: var(--accent);
+  text-shadow:
+    0 0 30px rgba(74, 144, 217, 0.9),
+    0 0 80px rgba(74, 144, 217, 0.4);
+  animation: showtime-pulse 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes showtime-pulse {
+  from { transform: scale(1);    text-shadow: 0 0 30px rgba(74,144,217,0.8); }
+  to   { transform: scale(1.06); text-shadow: 0 0 60px rgba(74,144,217,1), 0 0 120px rgba(74,144,217,0.5); }
+}
