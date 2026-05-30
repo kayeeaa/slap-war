@@ -867,6 +867,60 @@
 }
 
 @media (max-width: 560px) and (max-height: 680px) {
+  #start-screen {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .home-stage {
+    min-height: auto;
+    justify-content: flex-start;
+    padding: max(16px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
+    gap: 12px;
+  }
+
+  #start-screen .home-title-wrap h1 {
+    font-size: clamp(64px, 20vw, 88px);
+  }
+
+  .home-tagline {
+    font-size: clamp(12px, 3.5vw, 15px);
+    line-height: 1.25;
+  }
+
+  .home-format {
+    padding: 7px 12px;
+    border-radius: 22px;
+  }
+
+  .time-options {
+    gap: 10px;
+  }
+
+  #start-screen .btn-primary {
+    width: min(84vw, 292px);
+    padding: 10px 16px;
+    gap: 2px;
+  }
+
+  .pill-emoji {
+    font-size: clamp(23px, 6.6vw, 30px);
+  }
+
+  .pill-name {
+    font-size: clamp(18px, 5.8vw, 23px);
+  }
+
+  .pill-mobile-desc {
+    font-size: 11px;
+  }
+
+  .home-play {
+    font-size: clamp(27px, 8vw, 36px);
+    padding: 12px clamp(48px, 17vw, 74px);
+    margin-top: 4px;
+  }
+}
   .home-stage {
     justify-content: flex-start;
     padding: max(8px, env(safe-area-inset-top)) 14px max(8px, env(safe-area-inset-bottom));
