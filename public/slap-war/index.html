@@ -11,10 +11,11 @@
   <!-- ── Start screen ── -->
   <div id="start-screen" class="screen">
     <h1>SNAP</h1>
-    <p>Select your game time</p>
+    <p>Select your mode</p>
     <div class="time-options">
-      <button class="btn-primary" onclick="Game.start(60)">1 MIN</button>
-      <button class="btn-primary" onclick="Game.start(120)">2 MIN</button>
+      <button class="btn-primary btn-classic" onclick="Game.start('classic')">CLASSIC</button>
+      <button class="btn-primary btn-hard" onclick="Game.start('hard')">HARD</button>
+      <button class="btn-primary btn-extreme" onclick="Game.start('extreme')">EXTREME</button>
     </div>
   </div>
 
@@ -22,7 +23,6 @@
   <div id="result-screen" class="screen" style="display:none">
     <h1 id="result-heading"></h1>
     <p>You scored <strong id="final-score">0</strong></p>
-    <p id="best-score-msg">Best: <strong id="best-score">0</strong> pts</p>
     <button class="btn-primary" onclick="Game.goToStart()">Play Again</button>
   </div>
 
@@ -72,20 +72,39 @@
       playerNum: 0,
       isMatch: false,
       _justSnapped: false,
-      _peakScore: 0,
       _gameStartTime: 0,
       _duration: 0,
+      _isExtreme: false,
+      _isMoving: false,
 
       // Learning phase
       _learningDuration: 30000,
-      _learningSamples: [],   // reaction times (ms) for hits during learning
-      _learningWindows: 0,    // total match windows opened during learning
-      _matchOpenTime: 0,      // when the current match window opened
+      // Number match learning
+      _learningSamples: [],
+      _learningWindows: 0,
+      _matchOpenTime: 0,
+      // Colour match learning (extreme only)
+      _colorLearningSamples: [],
+      _colorLearningWindows: 0,
+      _colorMatchOpenTime: 0,
+      // Accuracy tracking (shared — false snaps aren't match-type-specific)
+      _learningMisses: 0,
+      // Show time
       _showTimeFired: false,
       _showTimeTimer: null,
       _gamePlanStartTime: 0,
-      _matchWindow: 1000,     // active window; generous during learning, personalised after
+      // Personalised after show time
+      _matchWindow: 1000,
       _playerStartFactor: 1.0,
+      _colorMatchWindow: 1000,
+      _colorPlayerStartFactor: 1.0,
+
+      // Colour match state (extreme only)
+      _botColor: '',
+      _playerColor: '',
+      _isColorMatch: false,
+      _colorMatchWindowTimer: null,
+      _lastMatchColor: '',
 
       // Number timers
       _botTimer: null,
@@ -97,7 +116,7 @@
       // Button roaming
       _moveTimer: null,
 
-      // Number colour cycles
+      // Colour cycle timers
       _botColorTimer: null,
       _playerColorTimer: null,
 
@@ -119,11 +138,15 @@
       SAFETY_WINDOW: 30000,
       SPEED_MIN_FACTOR: 0.35,
 
-      // Vibrant palette — all readable on dark background
       _colorPalette: [
-        '#4a90d9', '#9c6bef', '#26c6da', '#ff7043',
-        '#ec407a', '#66bb6a', '#ffa726', '#26a69a',
-        '#ef5350', '#ab47bc',
+        '#ff1744',  // red
+        '#ff6d00',  // orange
+        '#ffd600',  // yellow
+        '#00c853',  // green
+        '#00e5ff',  // cyan
+        '#2979ff',  // blue
+        '#d500f9',  // purple
+        '#ff4081',  // pink
       ],
 
       _greedyMessages: [
@@ -142,28 +165,46 @@
         'Slap War champion move! +5',
       ],
 
+      _colorSuccessMessages: [
+        'COLOUR MATCH! +5',
+        'Same shade! +5',
+        'Seeing double! +5',
+        'Wavelength locked! +5',
+        'Spot on! +5',
+      ],
+
       _missWords: ['BOO! 👎', 'MISSED! 💨', 'TOO SLOW! ⚡', 'NOPE! 🙅', 'OOPS! 😬', 'SO CLOSE! 😤'],
 
       // ── Lifecycle ─────────────────────────────────────────
 
-      start(durationSeconds) {
-        this._duration = durationSeconds * 1000;
+      start(mode) {
+        this._isExtreme = mode !== 'classic'; // colour matching: hard + extreme
+        this._isMoving  = mode === 'extreme'; // moving button: extreme only
+        this._duration  = 60000;
 
-        // Reset learning state
-        this._learningSamples = [];
-        this._learningWindows = 0;
-        this._matchOpenTime = 0;
-        this._showTimeFired = false;
-        this._gamePlanStartTime = 0;
-        this._matchWindow = 1000;
-        this._playerStartFactor = 1.0;
+        this._learningSamples        = [];
+        this._learningWindows        = 0;
+        this._matchOpenTime          = 0;
+        this._colorLearningSamples   = [];
+        this._colorLearningWindows   = 0;
+        this._colorMatchOpenTime     = 0;
+        this._learningMisses         = 0;
+        this._showTimeFired          = false;
+        this._gamePlanStartTime      = 0;
+        this._matchWindow            = 1000;
+        this._playerStartFactor      = 1.0;
+        this._colorMatchWindow       = 1000;
+        this._colorPlayerStartFactor = 1.0;
+        this._isColorMatch           = false;
+        this._lastMatchColor         = '';
+        this._botColor               = '';
+        this._playerColor            = '';
 
         document.getElementById('start-screen').style.display  = 'none';
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('game-screen').style.display   = 'flex';
 
         this.score = 0;
-        this._peakScore = 0;
         this._justSnapped = false;
         this._gameStartTime = Date.now();
         this._updateScore();
@@ -176,7 +217,7 @@
 
         this._scheduleBotChange();
         this._schedulePlayerChange();
-        this._startMoving();
+        if (this._isMoving) this._startMoving();
         this._startColorCycles();
         this._scheduleFirstMatch();
         this._resetSafetyTimer();
@@ -194,6 +235,7 @@
         clearTimeout(this._botTimer);
         clearTimeout(this._playerTimer);
         clearTimeout(this._matchWindowTimer);
+        clearTimeout(this._colorMatchWindowTimer);
         clearTimeout(this._msgTimer);
         clearTimeout(this._greedyTimer);
         clearTimeout(this._firstMatchTimer);
@@ -205,20 +247,16 @@
         this._stopColorCycles();
         document.getElementById('showtime-overlay').style.display = 'none';
 
-        const best = parseInt(localStorage.getItem('slapwar-best') || '0', 10);
-        if (this._peakScore > best) localStorage.setItem('slapwar-best', this._peakScore);
-        const displayBest = Math.max(this._peakScore, best);
-
         const won = this.score > 0;
         const heading = document.getElementById('result-heading');
         heading.textContent = won ? 'YOU WIN!' : 'YOU LOST';
         heading.className   = won ? 'win' : 'lose';
 
         document.getElementById('final-score').textContent = this.score;
-        document.getElementById('best-score').textContent  = displayBest;
 
-        this.isMatch = false;
-        this._justSnapped = false;
+        this.isMatch       = false;
+        this._isColorMatch = false;
+        this._justSnapped  = false;
 
         document.getElementById('bot-number').textContent    = '--';
         document.getElementById('player-number').textContent = '--';
@@ -232,7 +270,6 @@
       // ── Learning → Show Time ──────────────────────────────
 
       _triggerShowTime() {
-        // Close any open match cleanly before switching modes
         if (this.isMatch) {
           clearTimeout(this._matchWindowTimer);
           this.isMatch = false;
@@ -240,11 +277,23 @@
           this._divergeBoth();
           this._scheduleBotChange();
           this._schedulePlayerChange();
+          this._resumeMoving();
+        }
+        if (this._isColorMatch) {
+          clearTimeout(this._colorMatchWindowTimer);
+          this._isColorMatch = false;
+          this._colorMatchOpenTime = 0;
+          this._divergeColors();
+          this._cycleBotColor();
+          this._cyclePlayerColor();
+          this._resumeMoving();
         }
 
         this._buildPlayerProfile();
         this._showTimeFired = true;
         this._gamePlanStartTime = Date.now();
+        this.score = 0;
+        this._updateScore();
 
         const overlay = document.getElementById('showtime-overlay');
         overlay.style.display = 'flex';
@@ -252,21 +301,48 @@
       },
 
       _buildPlayerProfile() {
-        const hitCount = this._learningSamples.length;
-        const hitRate  = this._learningWindows > 0 ? hitCount / this._learningWindows : 0.5;
-        const avgReaction = hitCount > 0
-          ? this._learningSamples.reduce((a, b) => a + b, 0) / hitCount
-          : 450;
+        // ── Shared: false snap rate (0 = never guesses, 1 = all guesses) ──
+        const totalPresses  = this._learningSamples.length + this._learningMisses;
+        const falseSnapRate = totalPresses > 0
+          ? this._learningMisses / totalPresses : 0.2;
 
-        // difficulty: 0 = player is elite, 1 = player is struggling
-        const reactionNorm = Math.max(0, Math.min(1, (avgReaction - 150) / 600));
-        const missNorm     = 1 - hitRate;
-        const difficulty   = (reactionNorm + missNorm) / 2;
+        // ── Number match profile ──
+        const hits    = this._learningSamples.length;
+        const hitRate = this._learningWindows > 0 ? hits / this._learningWindows : 0.5;
+        const avgRxn  = hits > 0
+          ? this._learningSamples.reduce((a, b) => a + b, 0) / hits : 450;
+        const rxnNorm = Math.max(0, Math.min(1, (avgRxn - 150) / 600));
 
-        // Elite player: tight 480ms window, fast 0.50 start factor
-        // Struggling player: generous 1050ms window, comfortable 0.85 start factor
+        // Reaction time consistency: std dev normalised (0 = rock-solid, 1 = very erratic)
+        let rxnSd = 0.5;
+        if (hits >= 3) {
+          const sd = Math.sqrt(this._learningSamples.reduce((s, t) => s + (t - avgRxn) ** 2, 0) / hits);
+          rxnSd = Math.min(1, sd / 350);
+        }
+
+        // 0 = elite (tight window, fast start) → 1 = struggling (generous, slower start)
+        const difficulty = rxnNorm * 0.35 + (1 - hitRate) * 0.35 + rxnSd * 0.20 + falseSnapRate * 0.10;
         this._matchWindow       = Math.round(480 + difficulty * 570);
         this._playerStartFactor = 0.50 + difficulty * 0.35;
+
+        if (!this._isExtreme) return;
+
+        // ── Colour match profile (separate reaction time + hit rate, shared false snap) ──
+        const cHits    = this._colorLearningSamples.length;
+        const cHitRate = this._colorLearningWindows > 0 ? cHits / this._colorLearningWindows : 0.5;
+        const cAvgRxn  = cHits > 0
+          ? this._colorLearningSamples.reduce((a, b) => a + b, 0) / cHits : 500;
+        const cRxnNorm = Math.max(0, Math.min(1, (cAvgRxn - 150) / 700));
+
+        let cRxnSd = 0.5;
+        if (cHits >= 3) {
+          const cSd = Math.sqrt(this._colorLearningSamples.reduce((s, t) => s + (t - cAvgRxn) ** 2, 0) / cHits);
+          cRxnSd = Math.min(1, cSd / 400);
+        }
+
+        const cDifficulty = cRxnNorm * 0.35 + (1 - cHitRate) * 0.35 + cRxnSd * 0.20 + falseSnapRate * 0.10;
+        this._colorMatchWindow       = Math.round(500 + cDifficulty * 600);
+        this._colorPlayerStartFactor = 0.55 + cDifficulty * 0.35;
       },
 
       // ── Match guarantees ──────────────────────────────────
@@ -274,7 +350,7 @@
       _scheduleFirstMatch() {
         const delay = this._randInt(this.FIRST_MATCH_MIN, this.FIRST_MATCH_MAX);
         this._firstMatchTimer = setTimeout(() => {
-          if (!this.isMatch) {
+          if (!this.isMatch && !this._isColorMatch) {
             clearTimeout(this._botTimer);
             this.botNum = this.playerNum;
             this._setWithPulse('bot-number', this.botNum);
@@ -286,7 +362,7 @@
       _resetSafetyTimer() {
         clearTimeout(this._safetyTimer);
         this._safetyTimer = setTimeout(() => {
-          if (!this.isMatch) {
+          if (!this.isMatch && !this._isColorMatch) {
             clearTimeout(this._botTimer);
             this.botNum = this.playerNum;
             this._setWithPulse('bot-number', this.botNum);
@@ -296,18 +372,31 @@
         }, this.SAFETY_WINDOW);
       },
 
-      // ── Speed ramp ────────────────────────────────────────
+      // ── Speed ramps ───────────────────────────────────────
 
       _speedFactor() {
-        if (!this._showTimeFired) return 1.0; // comfortable and flat during learning
-        const elapsed        = Date.now() - this._gamePlanStartTime;
-        const gamePlanDuration = this._duration - this._learningDuration;
-        const t = Math.min(elapsed / gamePlanDuration, 1);
+        if (!this._showTimeFired) return 1.0;
+        const t = Math.min(
+          (Date.now() - this._gamePlanStartTime) / (this._duration - this._learningDuration), 1
+        );
         return this._playerStartFactor - t * (this._playerStartFactor - this.SPEED_MIN_FACTOR);
       },
 
       _scaledRandInt(min, max) {
         const f = this._speedFactor();
+        return this._randInt(Math.round(min * f), Math.round(max * f));
+      },
+
+      _colorSpeedFactor() {
+        if (!this._showTimeFired) return 1.0;
+        const t = Math.min(
+          (Date.now() - this._gamePlanStartTime) / (this._duration - this._learningDuration), 1
+        );
+        return this._colorPlayerStartFactor - t * (this._colorPlayerStartFactor - this.SPEED_MIN_FACTOR);
+      },
+
+      _scaledColorRandInt(min, max) {
+        const f = this._colorSpeedFactor();
         return this._randInt(Math.round(min * f), Math.round(max * f));
       },
 
@@ -333,7 +422,6 @@
 
       _scheduleBotChange() {
         this._botTimer = setTimeout(() => {
-          // Higher nudge chance during learning for more match opportunities = more data
           const nudge = this._showTimeFired ? this.NUDGE_CHANCE : 0.25;
           this.botNum = Math.random() < nudge ? this.playerNum : this._randInt(1, 100);
           this._setWithPulse('bot-number', this.botNum);
@@ -351,10 +439,11 @@
         }, this._scaledRandInt(this.PLAY_MIN, this.PLAY_MAX));
       },
 
-      // ── Match detection ───────────────────────────────────
+      // ── Number match detection ────────────────────────────
 
       _checkMatch() {
         if (this.botNum !== this.playerNum) return;
+        if (this.isMatch || this._isColorMatch) return; // one active match at a time
         clearTimeout(this._botTimer);
         clearTimeout(this._playerTimer);
         clearTimeout(this._firstMatchTimer);
@@ -362,6 +451,12 @@
         this.isMatch = true;
         this._matchOpenTime = Date.now();
         if (!this._showTimeFired) this._learningWindows++;
+        this._pauseMoving();
+
+        // In extreme, ensure colours differ visually during a number match
+        if (this._isExtreme && this._botColor === this._playerColor) {
+          this._divergeColors();
+        }
 
         this._matchWindowTimer = setTimeout(() => {
           this.isMatch = false;
@@ -369,7 +464,40 @@
           this._divergeBoth();
           this._scheduleBotChange();
           this._schedulePlayerChange();
+          this._resumeMoving();
         }, this._matchWindow);
+      },
+
+      // ── Colour match detection (extreme only) ─────────────
+
+      _checkColorMatch() {
+        if (!this._isExtreme) return false;
+        if (this._botColor !== this._playerColor) return false;
+        if (this.isMatch || this._isColorMatch) return false; // one active match at a time
+        // Block the same colour matching twice in a row
+        if (this._botColor === this._lastMatchColor) {
+          this._divergeColors();
+          return false;
+        }
+
+        clearTimeout(this._botColorTimer);
+        clearTimeout(this._playerColorTimer);
+        this._isColorMatch = true;
+        this._colorMatchOpenTime = Date.now();
+        if (!this._showTimeFired) this._colorLearningWindows++;
+        this._resetSafetyTimer();
+        this._pauseMoving();
+
+        this._colorMatchWindowTimer = setTimeout(() => {
+          this._isColorMatch = false;
+          this._colorMatchOpenTime = 0;
+          this._divergeColors();
+          this._cycleBotColor();
+          this._cyclePlayerColor();
+          this._resumeMoving();
+        }, this._colorMatchWindow);
+
+        return true;
       },
 
       // ── Player action ─────────────────────────────────────
@@ -381,16 +509,13 @@
         }
 
         if (this.isMatch) {
-          // Silently record reaction time during learning phase
           if (!this._showTimeFired && this._matchOpenTime > 0) {
             this._learningSamples.push(Date.now() - this._matchOpenTime);
           }
           this._matchOpenTime = 0;
-
           this.isMatch = false;
           clearTimeout(this._matchWindowTimer);
           this.score += 5;
-          if (this.score > this._peakScore) this._peakScore = this.score;
           this._updateScore();
           this.showMessage(this._pick(this._successMessages), 'success');
           this._glowNumbers();
@@ -402,11 +527,36 @@
 
           this._scheduleBotChange();
           this._schedulePlayerChange();
+          this._resumeMoving();
+
+        } else if (this._isColorMatch) {
+          if (!this._showTimeFired && this._colorMatchOpenTime > 0) {
+            this._colorLearningSamples.push(Date.now() - this._colorMatchOpenTime);
+          }
+          this._colorMatchOpenTime = 0;
+          this._isColorMatch = false;
+          clearTimeout(this._colorMatchWindowTimer);
+          this._lastMatchColor = this._botColor; // prevent same colour repeating next time
+          this.score += 5;
+          this._updateScore();
+          this.showMessage(this._pick(this._colorSuccessMessages), 'success');
+          this._glowNumbers();
+          this._divergeColors();
+
+          this._justSnapped = true;
+          clearTimeout(this._greedyTimer);
+          this._greedyTimer = setTimeout(() => { this._justSnapped = false; }, this._colorMatchWindow);
+
+          this._cycleBotColor();
+          this._cyclePlayerColor();
+          this._resumeMoving();
+
         } else {
+          if (!this._showTimeFired) this._learningMisses++;
           this._showMissPop();
           this.score -= 5;
           this._updateScore();
-          this.showMessage(this.score < 0 ? 'In the red! -5 ⚠️' : 'Missed! -5', 'fail');
+          this.showMessage(this._showTimeFired && this.score < 0 ? 'In the red! -5 ⚠️' : 'Missed! -5', 'fail');
         }
       },
 
@@ -414,12 +564,10 @@
 
       _startMoving() {
         const btn = document.getElementById('snap-btn');
-        // Anchor to current visual position before switching to fixed
         const rect = btn.getBoundingClientRect();
         btn.style.left = rect.left + 'px';
         btn.style.top  = rect.top  + 'px';
         btn.classList.add('roaming');
-        // Small delay so browser registers the initial fixed coords first
         setTimeout(() => this._placeSnapBtn(), 50);
       },
 
@@ -430,15 +578,12 @@
         const w   = btn.offsetWidth  || 200;
         const h   = btn.offsetHeight || 72;
         const pad = 14;
-
-        // Constrain Y to the gap between the two number panels
         const safeTop    = topPanel.getBoundingClientRect().bottom + pad;
         const safeBottom = bottomPanel.getBoundingClientRect().top - h - pad;
         const maxX       = window.innerWidth - w - pad;
-
         btn.style.left = this._randInt(pad, Math.max(pad, maxX)) + 'px';
         btn.style.top  = this._randInt(safeTop, Math.max(safeTop, safeBottom)) + 'px';
-        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._randInt(this.MOVE_MIN, this.MOVE_MAX));
+        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._scaledRandInt(this.MOVE_MIN, this.MOVE_MAX));
       },
 
       _stopMoving() {
@@ -449,6 +594,16 @@
         btn.style.top  = '';
       },
 
+      _pauseMoving() {
+        if (this._isMoving) clearTimeout(this._moveTimer);
+      },
+
+      _resumeMoving() {
+        if (!this._isMoving) return;
+        clearTimeout(this._moveTimer);
+        this._moveTimer = setTimeout(() => this._placeSnapBtn(), this._scaledRandInt(this.MOVE_MIN, this.MOVE_MAX));
+      },
+
       // ── Colour cycles ─────────────────────────────────────
 
       _startColorCycles() {
@@ -457,15 +612,39 @@
       },
 
       _cycleBotColor() {
-        document.getElementById('bot-number').style.color = this._pick(this._colorPalette);
-        this._botColorTimer = setTimeout(() => this._cycleBotColor(),
-          this._randInt(this.BOT_COLOR_MIN, this.BOT_COLOR_MAX));
+        // Pick a colour different from current; in extreme also avoid a repeat colour match
+        let newColor;
+        do {
+          newColor = this._pick(this._colorPalette);
+        } while (
+          newColor === this._botColor ||
+          (this._isExtreme && newColor === this._playerColor && newColor === this._lastMatchColor)
+        );
+        this._botColor = newColor;
+        document.getElementById('bot-number').style.color = newColor;
+        // If a colour match opened, _checkColorMatch clears both timers — return without rescheduling
+        if (this._isExtreme && this._checkColorMatch()) return;
+        const delay = this._isExtreme
+          ? this._scaledColorRandInt(this.BOT_COLOR_MIN, this.BOT_COLOR_MAX)
+          : this._randInt(this.BOT_COLOR_MIN, this.BOT_COLOR_MAX);
+        this._botColorTimer = setTimeout(() => this._cycleBotColor(), delay);
       },
 
       _cyclePlayerColor() {
-        document.getElementById('player-number').style.color = this._pick(this._colorPalette);
-        this._playerColorTimer = setTimeout(() => this._cyclePlayerColor(),
-          this._randInt(this.PLAY_COLOR_MIN, this.PLAY_COLOR_MAX));
+        let newColor;
+        do {
+          newColor = this._pick(this._colorPalette);
+        } while (
+          newColor === this._playerColor ||
+          (this._isExtreme && newColor === this._botColor && newColor === this._lastMatchColor)
+        );
+        this._playerColor = newColor;
+        document.getElementById('player-number').style.color = newColor;
+        if (this._isExtreme && this._checkColorMatch()) return;
+        const delay = this._isExtreme
+          ? this._scaledColorRandInt(this.PLAY_COLOR_MIN, this.PLAY_COLOR_MAX)
+          : this._randInt(this.PLAY_COLOR_MIN, this.PLAY_COLOR_MAX);
+        this._playerColorTimer = setTimeout(() => this._cyclePlayerColor(), delay);
       },
 
       _stopColorCycles() {
@@ -473,6 +652,19 @@
         clearTimeout(this._playerColorTimer);
         document.getElementById('bot-number').style.color    = '';
         document.getElementById('player-number').style.color = '';
+        this._botColor = '';
+        this._playerColor = '';
+      },
+
+      // ── Colour diverge ────────────────────────────────────
+
+      _divergeColors() {
+        let newColor;
+        do {
+          newColor = this._pick(this._colorPalette);
+        } while (newColor === this._botColor || newColor === this._playerColor);
+        this._playerColor = newColor;
+        document.getElementById('player-number').style.color = newColor;
       },
 
       // ── Helpers ───────────────────────────────────────────
@@ -498,7 +690,7 @@
       },
 
       _updateScore() {
-        document.getElementById('score').textContent = this.score;
+        document.getElementById('score').textContent = this._showTimeFired ? this.score : '--';
       },
 
       _setWithPulse(id, value) {
@@ -517,7 +709,6 @@
         });
       },
 
-      // Immediately change both numbers so neither sits on the matched value
       _divergeBoth() {
         this.botNum = this._randInt(1, 100);
         this._setWithPulse('bot-number', this.botNum);
@@ -534,16 +725,6 @@
       },
     };
 
-    // Space / Enter → SNAP in-game, Play Again on result screen
-    document.addEventListener('keydown', e => {
-      if (e.repeat) return;
-      if (e.code !== 'Space' && e.code !== 'Enter') return;
-      e.preventDefault();
-      const gs = document.getElementById('game-screen');
-      const rs = document.getElementById('result-screen');
-      if (gs.style.display !== 'none') { Game.handleSnap(); return; }
-      if (rs.style.display !== 'none') { Game.goToStart(); return; }
-    });
   </script>
 </body>
 </html>
