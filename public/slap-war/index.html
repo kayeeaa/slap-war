@@ -817,6 +817,27 @@
         let nextY = safeTop;
         let attempts = 0;
 
+        const botRect = document.getElementById('bot-number').getBoundingClientRect();
+const playerRect = document.getElementById('player-number').getBoundingClientRect();
+
+const overlapsNumber = (x, y) => {
+  const padding = 40;
+
+  const overlapsBot =
+    x < botRect.right + padding &&
+    x + w > botRect.left - padding &&
+    y < botRect.bottom + padding &&
+    y + h > botRect.top - padding;
+
+  const overlapsPlayer =
+    x < playerRect.right + padding &&
+    x + w > playerRect.left - padding &&
+    y < playerRect.bottom + padding &&
+    y + h > playerRect.top - padding;
+
+  return overlapsBot || overlapsPlayer;
+};
+
         do {
           const zone = this._pick([
             { x: [pad, Math.max(pad, window.innerWidth * 0.18)], y: [safeTop, Math.max(safeTop, window.innerHeight * 0.30)] },
@@ -832,7 +853,8 @@
           attempts++;
         } while (
           attempts < 10 &&
-          Math.hypot(nextX - (parseFloat(btn.style.left) || 0), nextY - (parseFloat(btn.style.top) || 0)) < minJump
+          Math.hypot(nextX - (parseFloat(btn.style.left) || 0), nextY - (parseFloat(btn.style.top) || 0)) < minJump ||
+overlapsNumber(nextX, nextY)
         );
 
         btn.style.left = Math.max(pad, Math.min(maxX, nextX)) + 'px';
