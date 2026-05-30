@@ -44,8 +44,8 @@ Classic mode uses a full pink bubblegum aesthetic:
 - WARM-UP overlay appears before any numbers or timers start
 - GO! overlay freezes the game between phases; scored run begins cleanly after it dismisses
 - Green border on correct snap; red flash animation on miss
-- Feedback messages (+5 / −5) use Lilita One in frosted green/red pills
-- Floating miss-pop word uses Lilita One with a warm crimson colour
+- Correct and wrong snaps use green/red panel flashes instead of score text
+- Expired match windows show a clear `MISSED!` message
 - TRY AGAIN / YOU WIN! result screen in the same pink Lilita One style
 
 ## Overlay Timing

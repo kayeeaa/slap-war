@@ -427,11 +427,14 @@
 
         this._buildPlayerProfile();
         this._showTimeFired = true;
-        this._gamePlanStartTime = Date.now();
+        this._gamePlanStartTime = 0;
         this.score = 0;
         this._updateScore();
 
         document.getElementById('game-screen').dataset.phase = 'scored';
+        if (document.getElementById('game-screen').dataset.mode === 'classic') {
+          this._updateClassicProgress(this._duration - this._learningDuration, this._duration - this._learningDuration);
+        }
         const overlay = document.getElementById('showtime-overlay');
         overlay.dataset.state = 'showtime';
         overlay.style.display = 'flex';
@@ -440,7 +443,9 @@
           overlay.style.display = 'none';
           // Restart game with a fresh 30-second scored window
           const scoredDuration = this._duration - this._learningDuration;
-          this._gameStartTime = Date.now() - this._learningDuration;
+          const now = Date.now();
+          this._gamePlanStartTime = now;
+          this._gameStartTime = now - this._learningDuration;
           this._scheduleBotChange();
           this._schedulePlayerChange();
           this._resetSafetyTimer();
@@ -568,20 +573,31 @@
 
       // ── Countdown ─────────────────────────────────────────
 
+      _updateClassicProgress(remaining, duration) {
+        document.getElementById('countdown').textContent = Math.ceil(remaining / 1000);
+        const fill = document.getElementById('progress-fill');
+        if (fill) fill.style.transform = 'scaleX(' + (remaining / duration) + ')';
+      },
+
       _startCountdown() {
         const tick = () => {
-          const remaining = Math.max(0, this._duration - (Date.now() - this._gameStartTime));
-          const totalSecs = Math.ceil(remaining / 1000);
           const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
           if (isClassic) {
-            document.getElementById('countdown').textContent = totalSecs;
-            const fill = document.getElementById('progress-fill');
-            if (fill) fill.style.width = (remaining / this._duration * 100) + '%';
-          } else {
-            const m = Math.floor(totalSecs / 60);
-            const s = totalSecs % 60;
-            document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
+            const phaseDuration = this._showTimeFired
+              ? this._duration - this._learningDuration
+              : this._learningDuration;
+            const phaseStart = this._showTimeFired ? this._gamePlanStartTime : this._gameStartTime;
+            const remaining = Math.max(0, phaseDuration - (Date.now() - phaseStart));
+            this._updateClassicProgress(remaining, phaseDuration);
+            if (remaining > 0) this._countdownTimer = setTimeout(tick, 200);
+            return;
           }
+
+          const remaining = Math.max(0, this._duration - (Date.now() - this._gameStartTime));
+          const totalSecs = Math.ceil(remaining / 1000);
+          const m = Math.floor(totalSecs / 60);
+          const s = totalSecs % 60;
+          document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
           if (remaining > 0) this._countdownTimer = setTimeout(tick, 200);
         };
         tick();
@@ -636,7 +652,7 @@
           this.isMatch = false;
           this._matchOpenTime = 0;
           this._markMatchClosed();
-          this._recordMiss('Too slow! Number match missed -5', true);
+          this._recordMiss(true);
           this._divergeBoth();
           this._scheduleBotChange();
           this._schedulePlayerChange();
@@ -669,7 +685,7 @@
           this._isColorMatch = false;
           this._colorMatchOpenTime = 0;
           this._markMatchClosed();
-          this._recordMiss('Too slow! Colour match missed -5', true);
+          this._recordMiss(true);
           this._divergeColors();
           this._cycleBotColor();
           this._cyclePlayerColor();
@@ -700,7 +716,6 @@
           this._markMatchClosed();
           this.score += 5;
           this._updateScore();
-          this.showMessage(this._pick(this._successMessages), 'success');
           this._glowNumbers();
           this._flashPanels('snap-hit');
           this._divergeBoth();
@@ -724,7 +739,6 @@
           this._markMatchClosed();
           this.score += 5;
           this._updateScore();
-          this.showMessage(this._pick(this._colorSuccessMessages), 'success');
           this._glowNumbers();
           this._flashPanels('snap-hit');
           this._divergeColors();
@@ -738,7 +752,7 @@
           this._resumeMoving();
 
         } else {
-          this._recordMiss('Missed! -5');
+          this._recordMiss(false);
         }
       },
 
@@ -860,7 +874,28 @@
         clearTimeout(this._msgTimer);
         el.textContent = text;
         el.className = 'show ' + type;
+        if (document.getElementById('game-screen').dataset.mode === 'classic') {
+          this._placeClassicMessage(el);
+        }
         this._msgTimer = setTimeout(() => { el.className = ''; }, 1100);
+      },
+
+      _placeClassicMessage(el) {
+        const zones = [
+          { left: 24, top: 18 },
+          { left: 50, top: 20 },
+          { left: 76, top: 18 },
+          { left: 20, top: 42 },
+          { left: 80, top: 42 },
+          { left: 24, top: 72 },
+          { left: 50, top: 78 },
+          { left: 76, top: 72 },
+        ];
+        const zone = this._pick(zones);
+        const wobbleX = this._randInt(-7, 7);
+        const wobbleY = this._randInt(-5, 5);
+        el.style.left = Math.max(12, Math.min(88, zone.left + wobbleX)) + 'vw';
+        el.style.top = Math.max(14, Math.min(84, zone.top + wobbleY)) + 'vh';
       },
 
       _showMissPop() {
@@ -879,13 +914,14 @@
         document.getElementById('score').textContent = this._showTimeFired ? this.score : '--';
       },
 
-      _recordMiss(message, alwaysUseMessage = false) {
+      _recordMiss(showExpiredMatchMessage = false) {
         if (!this._showTimeFired) this._learningMisses++;
-        this._showMissPop();
         this._flashPanels('snap-miss');
         this.score -= 5;
         this._updateScore();
-        this.showMessage(!alwaysUseMessage && this._showTimeFired && this.score < 0 ? 'In the red! -5 ⚠️' : message, 'fail');
+        if (showExpiredMatchMessage) {
+          this.showMessage('MISSED!', 'fail');
+        }
       },
 
       _setWithPulse(id, value) {

@@ -247,3 +247,26 @@ The old random emoji sparkle background was disabled. The home page now relies o
 
 ### Follow-Up
 The decoration selectors were strengthened to `#start-screen .home-*` because an older `#start-screen > *:not(.sparkle)` rule had enough specificity to override `position: fixed` on the rainbow/cloud layers.
+
+---
+
+## Session: 2026-05-30 - Classic Button Overlap And Phase Timer
+
+### What Changed
+Classic mode now uses a phase-based timer display: warm-up shows a 30-second countdown/bar, then the scored phase resets to a fresh 30-second countdown/bar after the GO overlay dismisses. `_gamePlanStartTime` is now set after the GO overlay so overlay time does not eat into the scored run.
+
+The classic number panels and numbers were enlarged, and mobile classic layout now lets the circular SNAP button overlap between the bot and player panels like the reference mockup.
+
+### Follow-Up
+The timer fill now shrinks with `transform: scaleX(...)` instead of width, because the fill is a flex item and width changes were being overridden by flex sizing. A separate track is drawn behind it.
+
+Follow-up: the zero-height seam made the SNAP button disappear once the panels were enlarged. Classic mode now gives `#mid-zone` a real fixed vertical slot between the two number panels, reduces the panel flex basis, and slightly reduces the classic number sizes so the circular SNAP button has visible space on desktop and mobile.
+
+Second follow-up: the desktop SNAP button was being vertically squeezed by flex layout, so the classic SNAP button now has a fixed flex basis/min-height to stay circular. The SNAP label is larger. Classic feedback messages now use randomized fixed screen positions so +5/-5 messages do not sit behind the button on mobile.
+
+Third follow-up: score text feedback was removed from normal correct/wrong snaps. Correct snaps rely on the green panel flash, wrong snaps rely on the red panel flash, and only expired match windows show a `MISSED!` message.
+
+Fourth follow-up: classic panel labels (`BOT` / `YOU` with emoji) are positioned absolutely near the top-left of each number box so they sit higher without changing number centering.
+
+### Boundary
+This change is scoped to classic-mode layout and the classic progress display. The underlying warm-up duration, scored duration, match rules, scoring, and Hard/Extreme gameplay behaviour are unchanged.

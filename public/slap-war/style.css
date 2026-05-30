@@ -424,6 +424,9 @@ body[data-mode="classic"] #showtime-overlay {
     radial-gradient(100% 80% at 12% 110%, oklch(0.86 0.12 300) 0%, transparent 50%),
     radial-gradient(110% 90% at 92% 100%, oklch(0.88 0.13 220) 0%, transparent 48%),
     linear-gradient(165deg, oklch(0.92 0.08 350) 0%, oklch(0.84 0.12 345) 48%, oklch(0.80 0.13 320) 100%);
+  justify-content: flex-start;
+  overflow: hidden;
+  gap: clamp(8px, 1.3vh, 14px);
 }
 
 /* ── Header ─────────────────────────────────────────── */
@@ -496,6 +499,18 @@ body[data-mode="classic"] #showtime-overlay {
   gap: 10px;
   padding: 0 16px 4px;
   width: 100%;
+  position: relative;
+}
+
+#game-screen[data-mode="classic"] #progress-wrap::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 58px;
+  top: calc(50% - 2px);
+  height: 10px;
+  border-radius: 999px;
+  background: oklch(0.76 0.08 305 / 0.35);
 }
 
 #progress-fill {
@@ -503,8 +518,11 @@ body[data-mode="classic"] #showtime-overlay {
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(90deg, oklch(0.72 0.17 285), oklch(0.72 0.20 350));
-  width: 100%;
-  transition: width 0.2s linear;
+  transform-origin: left center;
+  transform: scaleX(1);
+  transition: transform 0.2s linear;
+  position: relative;
+  z-index: 1;
 }
 
 #game-screen[data-mode="classic"] #countdown {
@@ -520,14 +538,21 @@ body[data-mode="classic"] #showtime-overlay {
 
 #game-screen[data-mode="classic"] .panel {
   background: rgba(255, 255, 255, 0.65);
-  border-radius: 24px;
-  margin: 0 16px;
+  border-radius: clamp(28px, 6vw, 42px);
+  margin: 0 clamp(16px, 5vw, 44px);
   border: 2px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 8px 20px oklch(0.6 0.1 340 / 0.15);
   transition: box-shadow 0.2s ease;
+  flex: 1 1 clamp(165px, 23vh, 245px);
+  min-height: 0;
+  padding: clamp(14px, 2.2vh, 24px) 0;
+  position: relative;
 }
 
 #game-screen[data-mode="classic"] .panel-label {
+  position: absolute;
+  top: clamp(20px, 3.6vh, 36px);
+  left: clamp(24px, 4vw, 48px);
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: clamp(0.78rem, 3vw, 0.95rem);
@@ -537,6 +562,7 @@ body[data-mode="classic"] #showtime-overlay {
 
 #game-screen[data-mode="classic"] #bot-number,
 #game-screen[data-mode="classic"] #player-number {
+  font-size: clamp(96px, 24vw, 168px);
   color: oklch(0.55 0.22 350);
   font-family: 'Lilita One', cursive;
   -webkit-text-stroke: clamp(1px, 0.3vw, 2px) rgba(255, 255, 255, 0.6);
@@ -570,27 +596,153 @@ body[data-mode="classic"] #showtime-overlay {
 
 /* ── SNAP button — circle ───────────────────────────── */
 
+@keyframes btn-float {
+  0%, 100% { translate: 0 0; }
+  50%       { translate: 0 -7px; }
+}
+
+@keyframes btn-glow-ring {
+  0%, 100% {
+    box-shadow:
+      0 8px 0 oklch(0.44 0.2 350),
+      0 18px 32px oklch(0.55 0.2 345 / 0.55),
+      inset 0 3px 6px rgba(255, 255, 255, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 8px 0 oklch(0.44 0.2 350),
+      0 24px 44px oklch(0.55 0.2 345 / 0.70),
+      inset 0 3px 6px rgba(255, 255, 255, 0.55),
+      0 0 0 8px oklch(0.90 0.10 355 / 0.38);
+  }
+}
+
+@keyframes btn-shine {
+  0%   { left: -110%; opacity: 0; }
+  8%   { opacity: 0.65; }
+  28%  { left: 130%; opacity: 0; }
+  100% { left: 130%; opacity: 0; }
+}
+
+#game-screen[data-mode="classic"] #mid-zone {
+  justify-content: center;
+  flex: 0 0 clamp(122px, 17vh, 172px);
+  gap: 0.75rem;
+  position: relative;
+  z-index: 8;
+  min-height: clamp(122px, 17vh, 172px);
+  height: auto;
+  padding: 0.25rem 0;
+  margin: 0;
+  overflow: visible;
+}
+
 #game-screen[data-mode="classic"] #snap-btn {
-  width:  clamp(110px, 34vw, 148px);
-  height: clamp(110px, 34vw, 148px);
+  width:  clamp(128px, 34vw, 164px);
+  height: clamp(128px, 34vw, 164px);
+  min-height: clamp(128px, 34vw, 164px);
+  flex: 0 0 clamp(128px, 34vw, 164px);
   border-radius: 50%;
   font-family: 'Lilita One', cursive;
-  font-size: clamp(1.1rem, 4.5vw, 1.5rem);
+  font-size: clamp(1.8rem, 5.4vw, 2.4rem);
   letter-spacing: 2px;
-  -webkit-text-stroke: 1px oklch(0.48 0.2 350);
-  background: radial-gradient(circle at 40% 35%,
-    oklch(0.88 0.14 355),
-    oklch(0.72 0.20 350) 55%,
-    oklch(0.58 0.22 350) 100%);
+  -webkit-text-stroke: 1px oklch(0.44 0.2 350);
+  background: radial-gradient(circle at 38% 32%,
+    oklch(0.93 0.09 358),
+    oklch(0.76 0.22 352) 45%,
+    oklch(0.60 0.25 348) 100%);
   box-shadow:
     0 8px 0 oklch(0.44 0.2 350),
     0 18px 32px oklch(0.55 0.2 345 / 0.55),
     inset 0 3px 6px rgba(255, 255, 255, 0.55);
-  transition: transform 0.14s cubic-bezier(.34,1.56,.64,1), box-shadow 0.14s ease;
+  transition: translate 0.12s cubic-bezier(.34,1.56,.64,1),
+              scale 0.12s cubic-bezier(.34,1.56,.64,1),
+              box-shadow 0.14s ease;
+  position: relative;
+  overflow: hidden;
+  animation: btn-float 2.5s ease-in-out infinite, btn-glow-ring 2.8s ease-in-out infinite;
+}
+
+@media (max-width: 700px) {
+  #game-screen[data-mode="classic"] #progress-wrap {
+    padding: 4px clamp(22px, 9vw, 54px) 10px;
+  }
+
+  #game-screen[data-mode="classic"] #progress-wrap::before {
+    left: clamp(22px, 9vw, 54px);
+    right: clamp(58px, 13vw, 78px);
+    top: calc(50% - 3px);
+  }
+
+  #game-screen[data-mode="classic"] .panel {
+    flex: 1 1 clamp(175px, 23vh, 225px);
+    margin: 0 clamp(18px, 7vw, 54px);
+    border-width: 4px;
+    box-shadow:
+      0 10px 0 rgba(255,255,255,0.55),
+      0 16px 30px oklch(0.6 0.1 340 / 0.16);
+  }
+
+  #game-screen[data-mode="classic"] .panel-label {
+    top: clamp(24px, 5.5vh, 42px);
+    left: clamp(28px, 8vw, 44px);
+  }
+
+  #game-screen[data-mode="classic"] #bot-number,
+  #game-screen[data-mode="classic"] #player-number {
+    font-size: clamp(88px, 25vw, 132px);
+  }
+
+  #game-screen[data-mode="classic"] #mid-zone {
+    flex-basis: clamp(124px, 16vh, 148px);
+    min-height: clamp(124px, 16vh, 148px);
+  }
+
+  #game-screen[data-mode="classic"] #snap-btn {
+    width: clamp(112px, 31vw, 136px);
+    height: clamp(112px, 31vw, 136px);
+    min-height: clamp(112px, 31vw, 136px);
+    flex-basis: clamp(112px, 31vw, 136px);
+    font-size: clamp(1.6rem, 8vw, 2.1rem);
+  }
+
+  #game-screen[data-mode="classic"] #message {
+    position: fixed;
+  }
+}
+
+/* Shine sweep */
+#game-screen[data-mode="classic"] #snap-btn::before {
+  content: '';
+  position: absolute;
+  top: -15%;
+  left: -110%;
+  width: 42%;
+  height: 130%;
+  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.58) 50%, transparent 80%);
+  transform: skewX(-15deg);
+  animation: btn-shine 4.5s ease-in-out infinite 1s;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Bubble highlight spot */
+#game-screen[data-mode="classic"] #snap-btn::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 16%;
+  width: 44%;
+  height: 30%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.62) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 #game-screen[data-mode="classic"] #snap-btn:active {
-  transform: scale(0.92) translateY(5px);
+  translate: 0 5px;
+  scale: 0.92;
+  animation-play-state: paused;
   box-shadow:
     0 2px 0 oklch(0.44 0.2 350),
     0 6px 14px oklch(0.55 0.2 345 / 0.45),
@@ -610,6 +762,15 @@ body[data-mode="classic"] #showtime-overlay {
   letter-spacing: 0.02em;
   border: 2px solid transparent;
   backdrop-filter: blur(6px);
+  order: 2;
+  position: fixed;
+  z-index: 120;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  max-width: min(82vw, 340px);
+  text-align: center;
+  box-shadow: 0 3px 12px oklch(0.55 0.20 145 / 0.28);
 }
 
 #game-screen[data-mode="classic"] #message.success {
