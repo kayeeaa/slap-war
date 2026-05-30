@@ -270,3 +270,23 @@ Fourth follow-up: classic panel labels (`BOT` / `YOU` with emoji) are positioned
 
 ### Boundary
 This change is scoped to classic-mode layout and the classic progress display. The underlying warm-up duration, scored duration, match rules, scoring, and Hard/Extreme gameplay behaviour are unchanged.
+
+---
+
+## Session: 2026-05-30 - Home Hard Mode Contrast
+
+### What Changed
+The home-screen Hard selection background wash was darkened to a deeper purple and made slightly more opaque via `#start-screen.mode-hard .home-chaos-bg` in `home.css`.
+
+### Boundary
+Only the home-screen selection background changed. Game mode rules, timers, scoring, and in-game Hard mode styling were not changed.
+
+---
+
+## Session: 2026-05-30 - Mobile Home One-Screen Fit
+
+### What Changed
+Mobile home layout now uses `min-height: 100svh` with hidden overflow so the SNAP title, difficulty buttons, and PLAY button fit on one screen without the small scroll. Normal/taller mobile screens keep roomier spacing, while short-phone heights use an extra compact override. The crown is hidden on phone widths.
+
+### Boundary
+Only the home-screen mobile layout in `home.css` changed. Game screens and gameplay logic were not changed.
