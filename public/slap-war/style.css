@@ -1247,6 +1247,7 @@ body[data-mode="hard"] .overlay-rules {
 }
 
 #result-heading {
+  position: relative;
   font-family: 'Lilita One', cursive;
   font-size: clamp(58px, 19vw, 118px);
   line-height: 0.88;
@@ -1261,9 +1262,22 @@ body[data-mode="hard"] .overlay-rules {
   color: transparent;
   -webkit-text-stroke: clamp(2px, 0.45vw, 4px) #fff;
   paint-order: stroke fill;
-  filter:
-    drop-shadow(0 4px 0 oklch(0.48 0.2 350))
-    drop-shadow(0 12px 18px oklch(0.5 0.18 340 / 0.38));
+  animation: result-heading-glow-pink 1.6s ease-in-out infinite alternate;
+}
+
+#result-heading::before {
+  content: '';
+  position: absolute;
+  inset: -40% -20%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 55%,
+    oklch(0.72 0.28 350 / 0.65) 0%,
+    oklch(0.60 0.24 320 / 0.35) 45%,
+    transparent 72%);
+  filter: blur(28px);
+  z-index: -1;
+  animation: result-bloom-pulse 1.6s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 
 #result-heading.win {
@@ -1274,9 +1288,51 @@ body[data-mode="hard"] .overlay-rules {
     oklch(0.68 0.20 50) 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  filter:
-    drop-shadow(0 4px 0 oklch(0.54 0.2 55))
-    drop-shadow(0 12px 18px oklch(0.55 0.18 60 / 0.38));
+  animation: result-heading-glow-gold 1.6s ease-in-out infinite alternate;
+}
+
+#result-heading.win::before {
+  background: radial-gradient(ellipse at 50% 55%,
+    oklch(0.88 0.22 80 / 0.70) 0%,
+    oklch(0.76 0.20 60 / 0.38) 45%,
+    transparent 72%);
+}
+
+@keyframes result-heading-glow-pink {
+  0% {
+    filter:
+      drop-shadow(0 4px 0 oklch(0.48 0.2 350))
+      drop-shadow(0 0 8px  oklch(0.62 0.28 350 / 0.45))
+      drop-shadow(0 0 28px oklch(0.62 0.28 340 / 0.20));
+  }
+  100% {
+    filter:
+      drop-shadow(0 4px 0 oklch(0.48 0.2 350))
+      drop-shadow(0 0 22px oklch(0.72 0.32 350 / 0.90))
+      drop-shadow(0 0 52px oklch(0.65 0.28 330 / 0.55))
+      drop-shadow(0 0 80px oklch(0.60 0.24 340 / 0.30));
+  }
+}
+
+@keyframes result-heading-glow-gold {
+  0% {
+    filter:
+      drop-shadow(0 4px 0 oklch(0.54 0.2 55))
+      drop-shadow(0 0 8px  oklch(0.80 0.24 80 / 0.45))
+      drop-shadow(0 0 28px oklch(0.78 0.22 70 / 0.20));
+  }
+  100% {
+    filter:
+      drop-shadow(0 4px 0 oklch(0.54 0.2 55))
+      drop-shadow(0 0 22px oklch(0.90 0.28 85 / 0.90))
+      drop-shadow(0 0 52px oklch(0.84 0.24 70 / 0.55))
+      drop-shadow(0 0 80px oklch(0.78 0.20 60 / 0.30));
+  }
+}
+
+@keyframes result-bloom-pulse {
+  0%   { opacity: 0.4; transform: scale(0.90); }
+  100% { opacity: 1.0; transform: scale(1.08); }
 }
 
 #final-score-wrap {
@@ -1289,15 +1345,33 @@ body[data-mode="hard"] .overlay-rules {
 #final-score {
   font-family: 'Lilita One', cursive;
   font-size: clamp(62px, 20vw, 108px);
-  color: oklch(0.36 0.22 15);
-  filter: drop-shadow(0 5px 0 oklch(0.24 0.16 15 / 0.5));
+  color: oklch(0.62 0.24 350);
+  filter: drop-shadow(0 5px 0 oklch(0.40 0.20 350 / 0.55));
   line-height: 1;
   font-weight: inherit;
 }
 
 #result-screen.won #final-score {
-  color: oklch(0.38 0.18 145);
-  filter: drop-shadow(0 5px 0 oklch(0.26 0.14 145 / 0.5));
+  color: oklch(0.84 0.20 65);
+  filter: drop-shadow(0 5px 0 oklch(0.56 0.20 55 / 0.55));
+}
+
+/* ── Result screen glitter ───────────────────────────── */
+
+@keyframes result-glitter-fall {
+  0%   { opacity: 0;    transform: translateY(-30px) rotate(0deg)   scale(0.4); }
+  8%   { opacity: 1; }
+  90%  { opacity: 0.88; }
+  100% { opacity: 0;    transform: translateY(110vh) rotate(820deg) scale(1.5); }
+}
+
+.result-glitter-piece {
+  position: fixed;
+  top: 0;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  animation: result-glitter-fall linear infinite;
 }
 
 #result-hint {

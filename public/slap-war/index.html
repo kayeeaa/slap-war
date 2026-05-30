@@ -367,12 +367,14 @@
       },
 
       goToStart() {
+        document.querySelectorAll('.result-glitter-piece').forEach(el => el.remove());
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('start-screen').style.display  = '';
       },
 
       backToHome() {
         this._stopRun();
+        document.querySelectorAll('.result-glitter-piece').forEach(el => el.remove());
         document.getElementById('game-screen').style.display   = 'none';
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('start-screen').style.display  = '';
@@ -392,11 +394,32 @@
         document.getElementById('result-subtext').textContent = won ? 'YOU DID IT! 🎉' : 'SO CLOSE!';
         document.getElementById('final-score').textContent    = this.score;
         document.getElementById('result-hint').textContent    = won
-          ? 'You finished in the green 💚'
+          ? 'You finished in the gold ✨'
           : 'Finish above 0 to win';
 
         document.getElementById('game-screen').style.display   = 'none';
         document.getElementById('result-screen').style.display = 'flex';
+        this._spawnResultGlitter(won);
+      },
+
+      _spawnResultGlitter(won) {
+        document.querySelectorAll('.result-glitter-piece').forEach(el => el.remove());
+        const winSymbols  = ['✨','💛','🌟','💫','⭐','🎊','💎','🎉','🌸','💖','🎀','🪄','🦄','💜','🩷'];
+        const loseSymbols = ['🌸','💜','💕','✨','💫','🌷','💝','🩷','🫧','⭐','💖','🌙'];
+        const symbols = won ? winSymbols : loseSymbols;
+        const count   = won ? 62 : 46;
+        for (let i = 0; i < count; i++) {
+          const el = document.createElement('span');
+          el.className   = 'result-glitter-piece';
+          el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+          el.style.left  = Math.random() * 100 + 'vw';
+          el.style.fontSize = (12 + Math.random() * 26) + 'px';
+          const dur   = 1.8 + Math.random() * 2.8;
+          const delay = -(Math.random() * dur);
+          el.style.animationDuration = dur + 's';
+          el.style.animationDelay    = delay + 's';
+          document.body.appendChild(el);
+        }
       },
 
       _stopRun() {
