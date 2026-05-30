@@ -86,9 +86,11 @@
 
   <!-- ── Result screen ── -->
   <div id="result-screen" class="screen">
+    <div id="result-subtext"></div>
     <h1 id="result-heading"></h1>
-    <p>You scored <strong id="final-score">0</strong></p>
-    <button class="btn-primary" id="play-again-btn">Play Again</button>
+    <div id="final-score-wrap"><span id="final-score">0</span></div>
+    <div id="result-hint"></div>
+    <button class="btn-primary" id="play-again-btn">Play again ✨</button>
   </div>
 
   <!-- ── Game screen ── -->
@@ -97,13 +99,18 @@
     <div id="header">
       <button id="game-back-btn" aria-label="Back to home">← Home</button>
       <!-- score display only — real value is a closure variable, not the DOM -->
-      <div id="score-display">Score: <span id="score">0</span></div>
-      <div id="countdown">0:00</div>
+      <div id="score-display">⭐ SCORE <span id="score">0</span></div>
+      <div id="warmup-badge">● WARM-UP</div>
+    </div>
+
+    <div id="progress-wrap">
+      <div id="progress-fill"></div>
+      <div id="countdown">60</div>
     </div>
 
     <!-- Bot number (top) -->
     <div class="panel">
-      <div class="panel-label">TARGET</div>
+      <div class="panel-label">🤖 BOT</div>
       <div class="number" id="bot-number">--</div>
     </div>
 
@@ -112,23 +119,34 @@
     <!-- SNAP zone (middle) -->
     <div id="mid-zone">
       <div id="message"></div>
-      <button id="snap-btn">SNAP!</button>
+      <button id="snap-btn">SNAP</button>
     </div>
 
     <div class="divider"></div>
 
     <!-- Player number (bottom) -->
     <div class="panel">
+      <div class="panel-label">🦄 YOU</div>
       <div class="number" id="player-number">--</div>
-      <div class="panel-label">YOUR NUMBER</div>
     </div>
+
+    <div id="game-hint">Tap SNAP when the numbers match ✨</div>
 
   </div>
 
   <!-- ── Show-time overlay ── -->
   <div id="showtime-overlay">
-    <div id="showtime-inner">
-      <div id="showtime-label">SHOW TIME!</div>
+    <!-- warm-up panel (game start) -->
+    <div id="warmup-panel" class="overlay-panel">
+      <div class="overlay-heading">WARM-UP</div>
+      <div class="overlay-stars">✨</div>
+      <div class="overlay-body">Just play — I'm learning <em>how fast you are.</em><br>No score yet!</div>
+    </div>
+    <!-- go panel (showtime) -->
+    <div id="showtime-panel" class="overlay-panel">
+      <div class="overlay-sublabel">SHOW TIME</div>
+      <div class="overlay-heading">GO!</div>
+      <div class="overlay-body">Now it counts — <em>beat your own ability.</em><br><span class="overlay-rules">+5 hit · −5 miss · win above 0</span></div>
     </div>
   </div>
 
@@ -277,6 +295,24 @@
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('game-screen').style.display   = 'flex';
 
+        document.getElementById('game-screen').dataset.mode = mode;
+        document.getElementById('game-screen').dataset.phase = 'warmup';
+        document.body.dataset.mode = mode;
+
+        if (mode === 'classic') {
+          const wo = document.getElementById('showtime-overlay');
+          wo.dataset.state = 'warmup';
+          wo.style.display = 'flex';
+          setTimeout(() => {
+            wo.style.display = 'none';
+            this._beginGame();
+          }, 2500);
+        } else {
+          this._beginGame();
+        }
+      },
+
+      _beginGame() {
         this.score = 0;
         this._justSnapped = false;
         this._gameStartTime = Date.now();
@@ -316,10 +352,17 @@
 
         const won = this.score > 0;
         const heading = document.getElementById('result-heading');
-        heading.textContent = won ? 'YOU WIN!' : 'YOU LOST';
+        heading.textContent = won ? 'YOU WIN!' : 'TRY AGAIN';
         heading.className   = won ? 'win' : 'lose';
 
-        document.getElementById('final-score').textContent = this.score;
+        const resultScreen = document.getElementById('result-screen');
+        resultScreen.className = won ? 'screen won' : 'screen lost';
+
+        document.getElementById('result-subtext').textContent = won ? 'YOU DID IT! 🎉' : 'SO CLOSE!';
+        document.getElementById('final-score').textContent    = this.score;
+        document.getElementById('result-hint').textContent    = won
+          ? 'You finished in the green 💚'
+          : 'Finish above 0 to win';
 
         document.getElementById('game-screen').style.display   = 'none';
         document.getElementById('result-screen').style.display = 'flex';
@@ -340,6 +383,9 @@
         this._stopMoving();
         this._stopColorCycles();
         document.getElementById('showtime-overlay').style.display = 'none';
+        document.getElementById('game-screen').removeAttribute('data-mode');
+        document.getElementById('game-screen').removeAttribute('data-phase');
+        delete document.body.dataset.mode;
 
         this.isMatch       = false;
         this._isColorMatch = false;
@@ -354,14 +400,12 @@
       // ── Learning → Show Time ──────────────────────────────
 
       _triggerShowTime() {
+        // Close any open match window without rescheduling new numbers
         if (this.isMatch) {
           clearTimeout(this._matchWindowTimer);
           this.isMatch = false;
           this._matchOpenTime = 0;
           this._divergeBoth();
-          this._scheduleBotChange();
-          this._schedulePlayerChange();
-          this._resumeMoving();
         }
         if (this._isColorMatch) {
           clearTimeout(this._colorMatchWindowTimer);
@@ -370,8 +414,16 @@
           this._divergeColors();
           this._cycleBotColor();
           this._cyclePlayerColor();
-          this._resumeMoving();
         }
+
+        // Freeze all game timers while the GO! overlay is displayed
+        clearTimeout(this._botTimer);
+        clearTimeout(this._playerTimer);
+        clearTimeout(this._firstMatchTimer);
+        clearTimeout(this._safetyTimer);
+        clearTimeout(this._gameEndTimer);
+        this._stopCountdown();
+        this._pauseMoving();
 
         this._buildPlayerProfile();
         this._showTimeFired = true;
@@ -379,9 +431,23 @@
         this.score = 0;
         this._updateScore();
 
+        document.getElementById('game-screen').dataset.phase = 'scored';
         const overlay = document.getElementById('showtime-overlay');
+        overlay.dataset.state = 'showtime';
         overlay.style.display = 'flex';
-        setTimeout(() => { overlay.style.display = 'none'; }, 1800);
+
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          // Restart game with a fresh 30-second scored window
+          const scoredDuration = this._duration - this._learningDuration;
+          this._gameStartTime = Date.now() - this._learningDuration;
+          this._scheduleBotChange();
+          this._schedulePlayerChange();
+          this._resetSafetyTimer();
+          this._resumeMoving();
+          this._startCountdown();
+          this._gameEndTimer = setTimeout(() => this._endGame(), scoredDuration);
+        }, 2000);
       },
 
       _buildPlayerProfile() {
@@ -464,8 +530,11 @@
           : this._playerColor;
         this._botColor = matchColor;
         this._playerColor = matchColor;
-        document.getElementById('bot-number').style.color = matchColor;
-        document.getElementById('player-number').style.color = matchColor;
+        const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
+        if (!isClassic) {
+          document.getElementById('bot-number').style.color = matchColor;
+          document.getElementById('player-number').style.color = matchColor;
+        }
         this._checkColorMatch(true);
       },
 
@@ -503,9 +572,16 @@
         const tick = () => {
           const remaining = Math.max(0, this._duration - (Date.now() - this._gameStartTime));
           const totalSecs = Math.ceil(remaining / 1000);
-          const m = Math.floor(totalSecs / 60);
-          const s = totalSecs % 60;
-          document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
+          const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
+          if (isClassic) {
+            document.getElementById('countdown').textContent = totalSecs;
+            const fill = document.getElementById('progress-fill');
+            if (fill) fill.style.width = (remaining / this._duration * 100) + '%';
+          } else {
+            const m = Math.floor(totalSecs / 60);
+            const s = totalSecs % 60;
+            document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
+          }
           if (remaining > 0) this._countdownTimer = setTimeout(tick, 200);
         };
         tick();
@@ -606,6 +682,9 @@
       // ── Player action ─────────────────────────────────────
 
       handleSnap() {
+        const overlay = document.getElementById('showtime-overlay');
+        if (overlay && overlay.style.display !== 'none') return;
+
         if (this._justSnapped) {
           this.showMessage(this._pick(this._greedyMessages), 'fail');
           return;
@@ -623,6 +702,7 @@
           this._updateScore();
           this.showMessage(this._pick(this._successMessages), 'success');
           this._glowNumbers();
+          this._flashPanels('snap-hit');
           this._divergeBoth();
 
           this._justSnapped = true;
@@ -646,6 +726,7 @@
           this._updateScore();
           this.showMessage(this._pick(this._colorSuccessMessages), 'success');
           this._glowNumbers();
+          this._flashPanels('snap-hit');
           this._divergeColors();
 
           this._justSnapped = true;
@@ -713,6 +794,7 @@
       },
 
       _cycleBotColor() {
+        const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
         // Pick a colour different from current; in extreme also avoid a repeat colour match
         let newColor;
         do {
@@ -722,7 +804,7 @@
           (this._isExtreme && newColor === this._playerColor && newColor === this._lastMatchColor)
         );
         this._botColor = newColor;
-        document.getElementById('bot-number').style.color = newColor;
+        if (!isClassic) document.getElementById('bot-number').style.color = newColor;
         // If a colour match opened, _checkColorMatch clears both timers — return without rescheduling
         if (this._isExtreme && this._checkColorMatch()) return;
         const delay = this._isExtreme
@@ -732,6 +814,7 @@
       },
 
       _cyclePlayerColor() {
+        const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
         let newColor;
         do {
           newColor = this._pick(this._colorPalette);
@@ -740,7 +823,7 @@
           (this._isExtreme && newColor === this._botColor && newColor === this._lastMatchColor)
         );
         this._playerColor = newColor;
-        document.getElementById('player-number').style.color = newColor;
+        if (!isClassic) document.getElementById('player-number').style.color = newColor;
         if (this._isExtreme && this._checkColorMatch()) return;
         const delay = this._isExtreme
           ? this._scaledColorRandInt(this.PLAY_COLOR_MIN, this.PLAY_COLOR_MAX)
@@ -765,7 +848,9 @@
           newColor = this._pick(this._colorPalette);
         } while (newColor === this._botColor || newColor === this._playerColor);
         this._playerColor = newColor;
-        document.getElementById('player-number').style.color = newColor;
+        if (document.getElementById('game-screen').dataset.mode !== 'classic') {
+          document.getElementById('player-number').style.color = newColor;
+        }
       },
 
       // ── Helpers ───────────────────────────────────────────
@@ -797,6 +882,7 @@
       _recordMiss(message, alwaysUseMessage = false) {
         if (!this._showTimeFired) this._learningMisses++;
         this._showMissPop();
+        this._flashPanels('snap-miss');
         this.score -= 5;
         this._updateScore();
         this.showMessage(!alwaysUseMessage && this._showTimeFired && this.score < 0 ? 'In the red! -5 ⚠️' : message, 'fail');
@@ -811,10 +897,20 @@
       },
 
       _glowNumbers() {
+        if (document.getElementById('game-screen').dataset.mode === 'classic') return;
         ['bot-number', 'player-number'].forEach(id => {
           const el = document.getElementById(id);
           el.classList.add('glow');
           setTimeout(() => el.classList.remove('glow'), 600);
+        });
+      },
+
+      _flashPanels(cls) {
+        document.querySelectorAll('.panel').forEach(p => {
+          p.classList.remove('snap-hit', 'snap-miss');
+          void p.offsetWidth;
+          p.classList.add(cls);
+          setTimeout(() => p.classList.remove(cls), cls === 'snap-hit' ? 750 : 500);
         });
       },
 
@@ -1033,7 +1129,7 @@
         return 'FLAG{client_side_games_are_not_security_boundaries}';
       };
 
-      console.info('%cSlap War — client-side games are made of glass. Have fun finding the cracks.', 'color:#00e5ff;font-weight:900');
+      console.info('%cSnap - client-side games are made of glass. Have fun finding the cracks GARY', 'color:#00e5ff;font-weight:900');
       console.info('%cTip: window.helpMe() if you want a nudge.', 'color:#9c27b0');
     }
 

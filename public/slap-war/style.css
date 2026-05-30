@@ -320,18 +320,457 @@ html, body {
   to   { opacity: 1; }
 }
 
-#showtime-label {
-  font-size: clamp(3rem, 18vw, 6rem);
-  font-weight: 900;
-  letter-spacing: -2px;
-  color: var(--accent);
-  text-shadow:
-    0 0 30px rgba(74, 144, 217, 0.9),
-    0 0 80px rgba(74, 144, 217, 0.4);
-  animation: showtime-pulse 0.55s ease-in-out infinite alternate;
+/* ── Overlay panels (warm-up & go) ──────────────────── */
+
+.overlay-panel {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.65rem;
+  padding: 0 28px;
+  max-width: min(480px, calc(100vw - 32px));
 }
 
-@keyframes showtime-pulse {
-  from { transform: scale(1);    text-shadow: 0 0 30px rgba(74,144,217,0.8); }
-  to   { transform: scale(1.06); text-shadow: 0 0 60px rgba(74,144,217,1), 0 0 120px rgba(74,144,217,0.5); }
+#showtime-overlay[data-state="warmup"] #warmup-panel,
+#showtime-overlay[data-state="showtime"] #showtime-panel {
+  display: flex;
+}
+
+@keyframes overlay-pop {
+  0%   { transform: scale(0.82); opacity: 0; }
+  70%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.overlay-heading {
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(52px, 17vw, 108px);
+  line-height: 0.88;
+  background: linear-gradient(180deg,
+    #fff 0%,
+    oklch(0.93 0.06 350) 22%,
+    oklch(0.72 0.20 350) 58%,
+    oklch(0.64 0.18 310) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: clamp(2px, 0.45vw, 4px) #fff;
+  paint-order: stroke fill;
+  filter:
+    drop-shadow(0 4px 0 oklch(0.48 0.2 350))
+    drop-shadow(0 10px 16px oklch(0.5 0.18 340 / 0.4));
+  animation: overlay-pop 0.42s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+.overlay-sublabel {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.78rem, 2.8vw, 0.92rem);
+  font-weight: 800;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: oklch(0.52 0.16 310);
+}
+
+.overlay-stars {
+  font-size: clamp(26px, 5.5vw, 40px);
+  line-height: 1;
+}
+
+.overlay-body {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.88rem, 3.4vw, 1.05rem);
+  font-weight: 700;
+  color: oklch(0.38 0.12 350);
+  line-height: 1.55;
+}
+
+.overlay-body em {
+  font-style: normal;
+  color: oklch(0.58 0.22 350);
+  font-weight: 800;
+}
+
+.overlay-rules {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.87em;
+  color: oklch(0.5 0.10 310);
+}
+
+/* classic: semi-transparent so ghost numbers show through */
+body[data-mode="classic"] #showtime-overlay {
+  background: rgba(255, 215, 238, 0.80);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CLASSIC MODE — GAME SCREEN THEME
+   Scoped to [data-mode="classic"] — other modes untouched.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Hide new elements by default (non-classic modes) ── */
+
+#progress-wrap { display: none; }
+#warmup-badge  { display: none; }
+#game-hint     { display: none; }
+
+/* ── Background ─────────────────────────────────────── */
+
+#game-screen[data-mode="classic"] {
+  background:
+    radial-gradient(120% 90% at 50% -10%, oklch(0.96 0.05 330) 0%, transparent 55%),
+    radial-gradient(100% 80% at 12% 110%, oklch(0.86 0.12 300) 0%, transparent 50%),
+    radial-gradient(110% 90% at 92% 100%, oklch(0.88 0.13 220) 0%, transparent 48%),
+    linear-gradient(165deg, oklch(0.92 0.08 350) 0%, oklch(0.84 0.12 345) 48%, oklch(0.80 0.13 320) 100%);
+}
+
+/* ── Header ─────────────────────────────────────────── */
+
+#game-screen[data-mode="classic"] #header {
+  background: transparent;
+  border-bottom: none;
+  padding: 12px 16px 6px;
+}
+
+#game-screen[data-mode="classic"] #game-back-btn {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.7);
+  color: oklch(0.45 0.18 345);
+  font-size: clamp(0.72rem, 2.8vw, 0.85rem);
+  padding: 0.35rem 0.65rem;
+}
+
+#game-screen[data-mode="classic"] #score-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1.5px solid rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.8rem, 2.8vw, 0.95rem);
+  color: oklch(0.42 0.18 350);
+  flex: unset;
+  text-align: unset;
+}
+
+#game-screen[data-mode="classic"] #score-display span {
+  font-size: 1.1em;
+  font-weight: 900;
+  color: oklch(0.38 0.22 350);
+}
+
+/* ── Warm-up badge ──────────────────────────────────── */
+
+#game-screen[data-mode="classic"] #warmup-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(200, 180, 255, 0.4);
+  border: 1.5px solid rgba(180, 150, 255, 0.5);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.72rem, 2.6vw, 0.85rem);
+  font-weight: 700;
+  color: oklch(0.42 0.18 290);
+}
+
+#game-screen[data-mode="classic"][data-phase="scored"] #warmup-badge {
+  display: none;
+}
+
+/* ── Progress bar ───────────────────────────────────── */
+
+#game-screen[data-mode="classic"] #progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 4px;
+  width: 100%;
+}
+
+#progress-fill {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, oklch(0.72 0.17 285), oklch(0.72 0.20 350));
+  width: 100%;
+  transition: width 0.2s linear;
+}
+
+#game-screen[data-mode="classic"] #countdown {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.9rem, 3.2vw, 1.05rem);
+  font-weight: 800;
+  color: oklch(0.45 0.18 350);
+  min-width: 2ch;
+  text-align: right;
+}
+
+/* ── Panel cards ────────────────────────────────────── */
+
+#game-screen[data-mode="classic"] .panel {
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 24px;
+  margin: 0 16px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 20px oklch(0.6 0.1 340 / 0.15);
+  transition: box-shadow 0.2s ease;
+}
+
+#game-screen[data-mode="classic"] .panel-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.78rem, 3vw, 0.95rem);
+  letter-spacing: 1px;
+  color: oklch(0.55 0.14 340);
+}
+
+#game-screen[data-mode="classic"] #bot-number,
+#game-screen[data-mode="classic"] #player-number {
+  color: oklch(0.55 0.22 350);
+  font-family: 'Lilita One', cursive;
+  -webkit-text-stroke: clamp(1px, 0.3vw, 2px) rgba(255, 255, 255, 0.6);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 4px 0 oklch(0.45 0.2 350 / 0.5));
+}
+
+/* ── Snap-hit / snap-miss panel feedback ────────────── */
+
+#game-screen[data-mode="classic"] .panel.snap-hit {
+  box-shadow: 0 0 0 3px #4caf50, 0 8px 24px rgba(76, 175, 80, 0.35) !important;
+  border-color: rgba(76, 175, 80, 0.6) !important;
+}
+
+#game-screen[data-mode="classic"] .panel.snap-miss {
+  animation: panel-miss-flash 0.5s ease-out forwards;
+}
+
+@keyframes panel-miss-flash {
+  0%   { box-shadow: 0 0 0 3px #e53935, 0 8px 24px rgba(229, 57, 53, 0.4); border-color: rgba(229, 57, 53, 0.5); }
+  60%  { box-shadow: 0 0 0 3px #e53935, 0 8px 24px rgba(229, 57, 53, 0.25); }
+  100% { box-shadow: 0 8px 20px oklch(0.6 0.1 340 / 0.15); border-color: rgba(255, 255, 255, 0.85); }
+}
+
+/* ── Divider ────────────────────────────────────────── */
+
+#game-screen[data-mode="classic"] .divider {
+  background: transparent;
+  height: 0;
+}
+
+/* ── SNAP button — circle ───────────────────────────── */
+
+#game-screen[data-mode="classic"] #snap-btn {
+  width:  clamp(110px, 34vw, 148px);
+  height: clamp(110px, 34vw, 148px);
+  border-radius: 50%;
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(1.1rem, 4.5vw, 1.5rem);
+  letter-spacing: 2px;
+  -webkit-text-stroke: 1px oklch(0.48 0.2 350);
+  background: radial-gradient(circle at 40% 35%,
+    oklch(0.88 0.14 355),
+    oklch(0.72 0.20 350) 55%,
+    oklch(0.58 0.22 350) 100%);
+  box-shadow:
+    0 8px 0 oklch(0.44 0.2 350),
+    0 18px 32px oklch(0.55 0.2 345 / 0.55),
+    inset 0 3px 6px rgba(255, 255, 255, 0.55);
+  transition: transform 0.14s cubic-bezier(.34,1.56,.64,1), box-shadow 0.14s ease;
+}
+
+#game-screen[data-mode="classic"] #snap-btn:active {
+  transform: scale(0.92) translateY(5px);
+  box-shadow:
+    0 2px 0 oklch(0.44 0.2 350),
+    0 6px 14px oklch(0.55 0.2 345 / 0.45),
+    inset 0 3px 6px rgba(255, 255, 255, 0.55);
+}
+
+#game-screen[data-mode="classic"] #snap-btn:disabled {
+  opacity: 0.42;
+  filter: grayscale(0.15);
+}
+
+/* ── Message area ───────────────────────────────────── */
+
+#game-screen[data-mode="classic"] #message {
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(0.9rem, 4.2vw, 1.05rem);
+  letter-spacing: 0.02em;
+  border: 2px solid transparent;
+  backdrop-filter: blur(6px);
+}
+
+#game-screen[data-mode="classic"] #message.success {
+  background: oklch(0.93 0.10 145 / 0.88);
+  color: oklch(0.35 0.18 145);
+  border-color: oklch(0.68 0.18 145 / 0.45);
+  box-shadow: 0 3px 12px oklch(0.55 0.20 145 / 0.28);
+}
+
+#game-screen[data-mode="classic"] #message.fail {
+  background: oklch(0.95 0.06 20 / 0.88);
+  color: oklch(0.42 0.22 20);
+  border-color: oklch(0.68 0.20 20 / 0.45);
+  box-shadow: 0 3px 12px oklch(0.55 0.22 20 / 0.28);
+}
+
+body[data-mode="classic"] .miss-pop {
+  font-family: 'Lilita One', cursive;
+  color: oklch(0.48 0.24 20);
+  text-shadow: 0 2px 0 rgba(255,255,255,0.65), 0 0 16px oklch(0.65 0.22 20 / 0.5);
+}
+
+/* ── Hint text ──────────────────────────────────────── */
+
+#game-screen[data-mode="classic"] #game-hint {
+  display: block;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.72rem, 2.8vw, 0.88rem);
+  font-weight: 700;
+  color: oklch(0.52 0.13 340);
+  text-align: center;
+  padding: 6px 20px 10px;
+  opacity: 0.85;
+}
+
+#game-screen[data-mode="classic"][data-phase="scored"] #game-hint {
+  display: none;
+}
+
+
+/* ── Warm-up badge pulse ────────────────────────────── */
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%       { opacity: 0.65; transform: scale(0.95); }
+}
+
+#game-screen[data-mode="classic"] #warmup-badge {
+  animation: badge-pulse 1.6s ease-in-out infinite;
+}
+
+/* ── Hide score pill during warm-up ─────────────────── */
+
+#game-screen[data-mode="classic"][data-phase="warmup"] #score-display {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESULT SCREEN — all modes
+   ═══════════════════════════════════════════════════════ */
+
+#result-screen {
+  background:
+    radial-gradient(120% 90% at 50% -10%, oklch(0.96 0.05 330) 0%, transparent 55%),
+    radial-gradient(100% 80% at 12% 110%, oklch(0.86 0.12 300) 0%, transparent 50%),
+    radial-gradient(110% 90% at 92% 100%, oklch(0.88 0.13 220) 0%, transparent 48%),
+    linear-gradient(165deg, oklch(0.92 0.08 350) 0%, oklch(0.84 0.12 345) 48%, oklch(0.80 0.13 320) 100%);
+  gap: 0.55rem;
+}
+
+#result-subtext {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.82rem, 3.2vw, 0.98rem);
+  font-weight: 800;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: oklch(0.52 0.16 310);
+}
+
+#result-heading {
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(58px, 19vw, 118px);
+  line-height: 0.88;
+  letter-spacing: 1px;
+  background: linear-gradient(180deg,
+    #fff 0%,
+    oklch(0.93 0.06 350) 22%,
+    oklch(0.72 0.20 350) 58%,
+    oklch(0.64 0.18 310) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: clamp(2px, 0.45vw, 4px) #fff;
+  paint-order: stroke fill;
+  filter:
+    drop-shadow(0 4px 0 oklch(0.48 0.2 350))
+    drop-shadow(0 12px 18px oklch(0.5 0.18 340 / 0.38));
+}
+
+#result-heading.win {
+  background: linear-gradient(180deg,
+    #fff 0%,
+    oklch(0.96 0.10 90) 20%,
+    oklch(0.84 0.18 65) 55%,
+    oklch(0.68 0.20 50) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter:
+    drop-shadow(0 4px 0 oklch(0.54 0.2 55))
+    drop-shadow(0 12px 18px oklch(0.55 0.18 60 / 0.38));
+}
+
+#final-score-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+#final-score {
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(62px, 20vw, 108px);
+  color: oklch(0.36 0.22 15);
+  filter: drop-shadow(0 5px 0 oklch(0.24 0.16 15 / 0.5));
+  line-height: 1;
+  font-weight: inherit;
+}
+
+#result-screen.won #final-score {
+  color: oklch(0.38 0.18 145);
+  filter: drop-shadow(0 5px 0 oklch(0.26 0.14 145 / 0.5));
+}
+
+#result-hint {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.88rem, 3.4vw, 1.05rem);
+  font-weight: 700;
+  color: oklch(0.46 0.17 350);
+}
+
+#result-screen #play-again-btn {
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(1.05rem, 4vw, 1.28rem);
+  letter-spacing: 1px;
+  padding: clamp(13px, 2vh, 19px) clamp(34px, 8vw, 54px);
+  background: linear-gradient(180deg,
+    oklch(0.85 0.16 355) 0%,
+    oklch(0.72 0.20 350) 45%,
+    oklch(0.58 0.22 350) 100%);
+  box-shadow:
+    0 6px 0 oklch(0.46 0.2 350),
+    0 16px 30px oklch(0.55 0.2 345 / 0.48),
+    inset 0 3px 4px rgba(255, 255, 255, 0.6);
+  transition: transform 0.14s cubic-bezier(.34,1.56,.64,1), box-shadow 0.14s ease;
+}
+
+#result-screen #play-again-btn:active {
+  transform: translateY(4px) scale(1.01);
+  box-shadow:
+    0 2px 0 oklch(0.46 0.2 350),
+    0 6px 14px oklch(0.55 0.2 345 / 0.42),
+    inset 0 3px 4px rgba(255, 255, 255, 0.6);
 }

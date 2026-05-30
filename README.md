@@ -2,7 +2,7 @@
 
 > **⚠️ Never commit or push without checking with Kay first.**
 
-A family web app with two parts: a family planner for daily schedules and meals, and Slap War (an isometric dungeon game).
+A family web app with two parts: a family planner for daily schedules and meals, and Snap! (a reflex matching browser game with adaptive difficulty).
 
 ---
 
@@ -17,7 +17,7 @@ A family web app with two parts: a family planner for daily schedules and meals,
 | `/planner/pin/` | PIN entry screen |
 | `/planner/onboarding/` | Food preference questionnaire (first login only) |
 | `/planner/dashboard/` | Daily/weekly plan view |
-| `/slap-war/` | Isometric dungeon game |
+| `/slap-war/` | Snap! reflex matching game |
 
 ---
 
