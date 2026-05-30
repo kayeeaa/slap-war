@@ -141,6 +141,11 @@ html, body {
   color: var(--muted);
 }
 
+.panel.snap-hit {
+  background: radial-gradient(circle at 50% 48%, rgba(92, 220, 122, 0.18), transparent 58%);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.70), 0 8px 24px rgba(76, 175, 80, 0.25);
+}
+
 .number {
   font-size: var(--num-size);
   font-weight: 900;
@@ -158,11 +163,6 @@ html, body {
 @keyframes pulse {
   0%   { transform: scale(1.18); }
   100% { transform: scale(1);    }
-}
-
-.number.glow {
-  color: var(--success) !important;
-  text-shadow: 0 0 24px var(--success);
 }
 
 /* ── Miss pop ────────────────────────────────────────── */
@@ -405,6 +405,16 @@ body[data-mode="classic"] #showtime-overlay {
   -webkit-backdrop-filter: blur(14px);
 }
 
+body[data-mode="classic"] .overlay-panel {
+  padding: clamp(22px, 5vw, 34px) clamp(24px, 6vw, 42px);
+  border: 2px solid rgba(255, 255, 255, 0.48);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 18px 44px oklch(0.58 0.16 340 / 0.24);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 /* ═══════════════════════════════════════════════════════
    CLASSIC MODE — GAME SCREEN THEME
    Scoped to [data-mode="classic"] — other modes untouched.
@@ -573,6 +583,9 @@ body[data-mode="classic"] #showtime-overlay {
 /* ── Snap-hit / snap-miss panel feedback ────────────── */
 
 #game-screen[data-mode="classic"] .panel.snap-hit {
+  background:
+    radial-gradient(circle at 50% 48%, rgba(92, 220, 122, 0.20), transparent 58%),
+    rgba(255, 255, 255, 0.72);
   box-shadow: 0 0 0 3px #4caf50, 0 8px 24px rgba(76, 175, 80, 0.35) !important;
   border-color: rgba(76, 175, 80, 0.6) !important;
 }
@@ -810,6 +823,364 @@ body[data-mode="classic"] .miss-pop {
   display: none;
 }
 
+/* HARD MODE - classic-style layout with moody purple */
+
+body[data-mode="hard"] #showtime-overlay {
+  background: rgba(54, 28, 82, 0.84);
+}
+
+body[data-mode="hard"] .overlay-panel {
+  padding: clamp(22px, 5vw, 34px) clamp(24px, 6vw, 42px);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 44px oklch(0.22 0.12 288 / 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+body[data-mode="hard"] .overlay-body {
+  color: oklch(0.96 0.03 305);
+  text-shadow: 0 2px 10px oklch(0.20 0.12 288 / 0.45);
+}
+
+body[data-mode="hard"] .overlay-body em {
+  color: oklch(0.88 0.09 245);
+}
+
+body[data-mode="hard"] .overlay-rules {
+  color: oklch(0.90 0.07 300);
+}
+
+#game-screen[data-mode="hard"] {
+  background:
+    radial-gradient(120% 90% at 50% -10%, oklch(0.74 0.12 304) 0%, transparent 55%),
+    radial-gradient(100% 80% at 12% 110%, oklch(0.58 0.17 290) 0%, transparent 50%),
+    radial-gradient(110% 90% at 92% 100%, oklch(0.56 0.14 250) 0%, transparent 48%),
+    linear-gradient(165deg, oklch(0.66 0.14 305) 0%, oklch(0.54 0.18 294) 48%, oklch(0.42 0.16 282) 100%);
+  justify-content: flex-start;
+  overflow: hidden;
+  gap: clamp(8px, 1.3vh, 14px);
+}
+
+#game-screen[data-mode="hard"] #header {
+  background: transparent;
+  border-bottom: none;
+  padding: 12px 16px 6px;
+}
+
+#game-screen[data-mode="hard"] #warmup-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(215, 190, 255, 0.44);
+  border: 1.5px solid rgba(225, 205, 255, 0.58);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.72rem, 2.6vw, 0.85rem);
+  font-weight: 800;
+  color: oklch(0.36 0.18 292);
+}
+
+#game-screen[data-mode="hard"][data-phase="scored"] #warmup-badge {
+  display: none;
+}
+
+#game-screen[data-mode="hard"][data-phase="warmup"] #score-display {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#game-screen[data-mode="hard"] #progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 4px;
+  width: 100%;
+  position: relative;
+}
+
+#game-screen[data-mode="hard"] #progress-wrap::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 70px;
+  top: calc(50% - 2px);
+  height: 10px;
+  border-radius: 999px;
+  background: oklch(0.62 0.10 292 / 0.35);
+}
+
+#game-screen[data-mode="hard"] #progress-fill {
+  background: linear-gradient(90deg, oklch(0.72 0.20 305), oklch(0.70 0.18 235));
+}
+
+#game-screen[data-mode="hard"] #game-back-btn,
+#game-screen[data-mode="hard"] #score-display,
+#game-screen[data-mode="hard"] #countdown {
+  background: rgba(255, 255, 255, 0.70);
+  border: 1.5px solid rgba(255, 255, 255, 0.84);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: 'Nunito', sans-serif;
+  color: oklch(0.38 0.18 292);
+}
+
+#game-screen[data-mode="hard"] #game-back-btn {
+  font-size: clamp(0.72rem, 2.8vw, 0.85rem);
+  padding: 0.35rem 0.65rem;
+}
+
+#game-screen[data-mode="hard"] #score-display {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: unset;
+  text-align: unset;
+  padding: 6px 14px;
+  font-size: clamp(0.8rem, 2.8vw, 0.95rem);
+  font-weight: 800;
+}
+
+#game-screen[data-mode="hard"] #score-display span {
+  font-size: 1.1em;
+  font-weight: 900;
+  color: oklch(0.30 0.20 290);
+}
+
+#game-screen[data-mode="hard"] #countdown {
+  min-width: 4.6ch;
+  padding: 6px 12px;
+  text-align: center;
+  font-size: clamp(0.86rem, 3vw, 1rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+#game-screen[data-mode="hard"] .panel {
+  position: relative;
+  flex: 1 1 clamp(165px, 23vh, 245px);
+  min-height: 0;
+  margin: 0 clamp(16px, 5vw, 44px);
+  padding: clamp(14px, 2.2vh, 24px) 0;
+  border: 2px solid rgba(255, 255, 255, 0.70);
+  border-radius: clamp(28px, 6vw, 42px);
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: 0 8px 22px oklch(0.25 0.10 285 / 0.24);
+  transition: box-shadow 0.2s ease;
+}
+
+#game-screen[data-mode="hard"] .panel-label {
+  position: absolute;
+  top: clamp(20px, 3.6vh, 36px);
+  left: clamp(24px, 4vw, 48px);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.78rem, 3vw, 0.95rem);
+  letter-spacing: 1px;
+  color: oklch(0.38 0.14 302);
+}
+
+#game-screen[data-mode="hard"] #bot-number,
+#game-screen[data-mode="hard"] #player-number {
+  font-size: clamp(96px, 24vw, 168px);
+  font-family: 'Lilita One', cursive;
+  -webkit-text-stroke: clamp(1px, 0.3vw, 2px) rgba(255, 255, 255, 0.62);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 4px 0 oklch(0.25 0.12 288 / 0.45));
+}
+
+#game-screen[data-mode="hard"] .panel.snap-hit {
+  background:
+    radial-gradient(circle at 50% 48%, oklch(0.78 0.19 150 / 0.24), transparent 58%),
+    rgba(255, 255, 255, 0.60);
+  box-shadow: 0 0 0 3px oklch(0.72 0.16 150), 0 8px 24px oklch(0.60 0.15 150 / 0.36) !important;
+  border-color: oklch(0.72 0.16 150 / 0.64) !important;
+}
+
+#game-screen[data-mode="hard"] .panel.snap-miss {
+  animation: panel-miss-flash 0.5s ease-out forwards;
+}
+
+#game-screen[data-mode="hard"] .divider {
+  background: transparent;
+  height: 0;
+}
+
+#game-screen[data-mode="hard"] #mid-zone {
+  justify-content: center;
+  flex: 0 0 clamp(122px, 17vh, 172px);
+  gap: 0.75rem;
+  position: relative;
+  z-index: 8;
+  min-height: clamp(122px, 17vh, 172px);
+  height: auto;
+  padding: 0.25rem 0;
+  margin: 0;
+  overflow: visible;
+}
+
+#game-screen[data-mode="hard"] #snap-btn {
+  width: clamp(128px, 34vw, 164px);
+  height: clamp(128px, 34vw, 164px);
+  min-height: clamp(128px, 34vw, 164px);
+  flex: 0 0 clamp(128px, 34vw, 164px);
+  border-radius: 50%;
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(1.8rem, 5.4vw, 2.4rem);
+  letter-spacing: 2px;
+  -webkit-text-stroke: 1px oklch(0.30 0.17 292);
+  background: radial-gradient(circle at 38% 32%,
+    oklch(0.87 0.08 305),
+    oklch(0.64 0.20 302) 45%,
+    oklch(0.43 0.21 288) 100%);
+  box-shadow:
+    0 8px 0 oklch(0.28 0.18 292),
+    0 18px 32px oklch(0.30 0.17 292 / 0.55),
+    inset 0 3px 6px rgba(255, 255, 255, 0.48);
+  transition: translate 0.12s cubic-bezier(.34,1.56,.64,1),
+              scale 0.12s cubic-bezier(.34,1.56,.64,1),
+              box-shadow 0.14s ease;
+  position: relative;
+  overflow: hidden;
+  animation: btn-float 2.5s ease-in-out infinite, hard-btn-glow-ring 2.8s ease-in-out infinite;
+}
+
+@keyframes hard-btn-glow-ring {
+  0%, 100% {
+    box-shadow:
+      0 8px 0 oklch(0.28 0.18 292),
+      0 18px 32px oklch(0.30 0.17 292 / 0.55),
+      inset 0 3px 6px rgba(255, 255, 255, 0.48);
+  }
+  50% {
+    box-shadow:
+      0 8px 0 oklch(0.28 0.18 292),
+      0 24px 44px oklch(0.36 0.20 292 / 0.70),
+      inset 0 3px 6px rgba(255, 255, 255, 0.48),
+      0 0 0 8px oklch(0.76 0.10 306 / 0.34);
+  }
+}
+
+#game-screen[data-mode="hard"] #snap-btn::before {
+  content: '';
+  position: absolute;
+  top: -15%;
+  left: -110%;
+  width: 42%;
+  height: 130%;
+  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.52) 50%, transparent 80%);
+  transform: skewX(-15deg);
+  animation: btn-shine 4.5s ease-in-out infinite 1s;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+#game-screen[data-mode="hard"] #snap-btn::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 16%;
+  width: 44%;
+  height: 30%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.56) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+#game-screen[data-mode="hard"] #snap-btn:active {
+  translate: 0 5px;
+  scale: 0.92;
+  animation-play-state: paused;
+  box-shadow:
+    0 2px 0 oklch(0.28 0.18 292),
+    0 6px 14px oklch(0.30 0.17 292 / 0.45),
+    inset 0 3px 6px rgba(255, 255, 255, 0.48);
+}
+
+#game-screen[data-mode="hard"] #message {
+  font-family: 'Lilita One', cursive;
+  font-size: clamp(0.9rem, 4.2vw, 1.05rem);
+  letter-spacing: 0.02em;
+  border: 2px solid transparent;
+  backdrop-filter: blur(6px);
+  position: fixed;
+  z-index: 120;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  max-width: min(82vw, 340px);
+  text-align: center;
+}
+
+#game-screen[data-mode="hard"] #message.fail {
+  background: oklch(0.95 0.06 20 / 0.88);
+  color: oklch(0.42 0.22 20);
+  border-color: oklch(0.68 0.20 20 / 0.45);
+  box-shadow: 0 3px 12px oklch(0.40 0.18 20 / 0.30);
+}
+
+#game-screen[data-mode="hard"] #game-hint {
+  display: block;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.72rem, 2.8vw, 0.88rem);
+  font-weight: 800;
+  color: oklch(0.90 0.04 300);
+  text-align: center;
+  padding: 6px 20px 10px;
+  opacity: 0.9;
+  text-shadow: 0 1px 8px oklch(0.22 0.12 290 / 0.45);
+}
+
+@media (max-width: 700px) {
+  #game-screen[data-mode="hard"] .panel {
+    flex: 1 1 clamp(175px, 23vh, 225px);
+    margin: 0 clamp(18px, 7vw, 54px);
+    border-width: 4px;
+    box-shadow:
+      0 10px 0 rgba(255,255,255,0.38),
+      0 16px 30px oklch(0.25 0.10 285 / 0.22);
+  }
+
+  #game-screen[data-mode="hard"] #progress-wrap {
+    padding: 4px clamp(22px, 9vw, 54px) 10px;
+  }
+
+  #game-screen[data-mode="hard"] #progress-wrap::before {
+    left: clamp(22px, 9vw, 54px);
+    right: clamp(76px, 16vw, 94px);
+    top: calc(50% - 3px);
+  }
+
+  #game-screen[data-mode="hard"] .panel-label {
+    top: clamp(24px, 5.5vh, 42px);
+    left: clamp(28px, 8vw, 44px);
+  }
+
+  #game-screen[data-mode="hard"] #bot-number,
+  #game-screen[data-mode="hard"] #player-number {
+    font-size: clamp(88px, 25vw, 132px);
+  }
+
+  #game-screen[data-mode="hard"] #mid-zone {
+    flex-basis: clamp(124px, 16vh, 148px);
+    min-height: clamp(124px, 16vh, 148px);
+  }
+
+  #game-screen[data-mode="hard"] #snap-btn {
+    width: clamp(112px, 31vw, 136px);
+    height: clamp(112px, 31vw, 136px);
+    min-height: clamp(112px, 31vw, 136px);
+    flex-basis: clamp(112px, 31vw, 136px);
+    font-size: clamp(1.6rem, 8vw, 2.1rem);
+  }
+}
+
 
 /* ── Warm-up badge pulse ────────────────────────────── */
 
@@ -819,6 +1190,10 @@ body[data-mode="classic"] .miss-pop {
 }
 
 #game-screen[data-mode="classic"] #warmup-badge {
+  animation: badge-pulse 1.6s ease-in-out infinite;
+}
+
+#game-screen[data-mode="hard"] #warmup-badge {
   animation: badge-pulse 1.6s ease-in-out infinite;
 }
 
@@ -935,3 +1310,5 @@ body[data-mode="classic"] .miss-pop {
     0 6px 14px oklch(0.55 0.2 345 / 0.42),
     inset 0 3px 4px rgba(255, 255, 255, 0.6);
 }
+
+

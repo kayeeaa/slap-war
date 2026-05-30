@@ -30,6 +30,12 @@ Two numbers are shown at once — one for the bot, one for you. Tap SNAP when th
 - Safety matches prevent long dry spells.
 - In colour modes, guaranteed openings alternate between number and colour matches.
 - Match windows are rate-limited so one success can't immediately cascade into another.
+- In Hard and Extreme, a card's colour changes only when that card's number changes.
+- Colour match windows are slightly more generous than number windows because colour recognition is harder than reading matching numbers.
+- SNAP input registers on press-down for mouse/touch/pen, so matches are judged at press time rather than after button release.
+- The anti-spam guard only blocks repeat presses when no new valid match is active.
+- Successful snaps briefly hold the matched frame before changing, making hits feel less abrupt without extending the scoring window.
+- Successful snap feedback never changes number colours; number colour remains a gameplay signal in Hard and Extreme.
 
 ## Classic Mode Visual Theme
 
@@ -44,9 +50,13 @@ Classic mode uses a full pink bubblegum aesthetic:
 - WARM-UP overlay appears before any numbers or timers start
 - GO! overlay freezes the game between phases; scored run begins cleanly after it dismisses
 - Green border on correct snap; red flash animation on miss
-- Correct and wrong snaps use green/red panel flashes instead of score text
+- Correct and wrong snaps use green/red panel flashes instead of score text or number recolouring
 - Expired match windows show a clear `MISSED!` message
 - TRY AGAIN / YOU WIN! result screen in the same pink Lilita One style
+
+## Hard Mode Visual Theme
+
+Hard mode mirrors the Classic card/button layout with a deeper purple background, frosted number panels, a circular SNAP button, warm-up/GO overlays, a 30-second phase progress bar, and a small high-contrast colour set led by pink and blue. Its visible hints and home-screen copy reference matching either numbers or colours.
 
 ## Overlay Timing
 

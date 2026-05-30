@@ -54,13 +54,13 @@
           <span class="pill-tip">
             <span class="pill-tip-close" aria-label="Close tooltip">×</span>
             <span class="tip-head">💖 Hard</span>
-            <span class="tip-body">Snap number matches or colour matches. Two things to watch.</span>
+            <span class="tip-body">Match numbers or colours. Two signals to watch.</span>
             <span class="tip-tags"><span>🔢 Numbers</span><span>🎨 Colours</span></span>
           </span>
           <span class="pill-emoji">💖</span>
           <span class="pill-name">Hard</span>
           <span class="pill-sub">Quick taps win</span>
-          <span class="pill-mobile-desc">Numbers or colours · two things to watch</span>
+          <span class="pill-mobile-desc">Match number or colour</span>
         </button>
         <button class="btn-primary btn-extreme" data-mode="extreme" aria-pressed="false">
           <span class="pill-tip">
@@ -182,7 +182,7 @@
       // Personalised after show time
       _matchWindow: 1000,
       _playerStartFactor: 1.0,
-      _colorMatchWindow: 1000,
+      _colorMatchWindow: 1200,
       _colorPlayerStartFactor: 1.0,
 
       // Colour match state (extreme only)
@@ -200,6 +200,12 @@
       _matchWindowTimer: null,
       _msgTimer: null,
       _greedyTimer: null,
+      _hitHoldTimer: null,
+
+      _holdHitFrame(callback) {
+        clearTimeout(this._hitHoldTimer);
+        this._hitHoldTimer = setTimeout(callback, this.HIT_HOLD_MS);
+      },
 
       // Button roaming
       _moveTimer: null,
@@ -226,6 +232,7 @@
       SAFETY_WINDOW: 30000,
       MIN_MATCH_GAP: 1200,
       SPEED_MIN_FACTOR: 0.35,
+      HIT_HOLD_MS: 320,
 
       _colorPalette: [
         '#ff1744',  // red
@@ -237,6 +244,15 @@
         '#d500f9',  // purple
         '#ff4081',  // pink
       ],
+      _hardColorPalette: [
+        '#ff2aa3',  // hot pink
+        '#0057ff',  // royal blue
+        '#00d7c7',  // bright teal
+        '#ffe600',  // yellow
+        '#7a00ff',  // violet
+        '#ff6b00',  // orange
+      ],
+      _activeColorPalette: [],
 
       _greedyMessages: [
         "Don't be greedy — already banked! 🤑",
@@ -282,7 +298,7 @@
         this._gamePlanStartTime      = 0;
         this._matchWindow            = 1000;
         this._playerStartFactor      = 1.0;
-        this._colorMatchWindow       = 1000;
+        this._colorMatchWindow       = 1200;
         this._colorPlayerStartFactor = 1.0;
         this._isColorMatch           = false;
         this._lastMatchColor         = '';
@@ -290,6 +306,7 @@
         this._nextGuaranteedMatchType = 'number';
         this._botColor               = '';
         this._playerColor            = '';
+        this._activeColorPalette     = mode === 'hard' ? this._hardColorPalette : this._colorPalette;
 
         document.getElementById('start-screen').style.display  = 'none';
         document.getElementById('result-screen').style.display = 'none';
@@ -298,8 +315,11 @@
         document.getElementById('game-screen').dataset.mode = mode;
         document.getElementById('game-screen').dataset.phase = 'warmup';
         document.body.dataset.mode = mode;
+        document.getElementById('game-hint').textContent = mode === 'hard'
+          ? 'Tap SNAP when the numbers or colours match ✨'
+          : 'Tap SNAP when the numbers match ✨';
 
-        if (mode === 'classic') {
+        if (mode === 'classic' || mode === 'hard') {
           const wo = document.getElementById('showtime-overlay');
           wo.dataset.state = 'warmup';
           wo.style.display = 'flex';
@@ -327,7 +347,7 @@
         this._scheduleBotChange();
         this._schedulePlayerChange();
         if (this._isMoving) this._startMoving();
-        this._startColorCycles();
+        if (this._isExtreme) this._startColorCycles();
         this._scheduleFirstMatch();
         this._resetSafetyTimer();
         this._startCountdown();
@@ -375,6 +395,7 @@
         clearTimeout(this._colorMatchWindowTimer);
         clearTimeout(this._msgTimer);
         clearTimeout(this._greedyTimer);
+        clearTimeout(this._hitHoldTimer);
         clearTimeout(this._firstMatchTimer);
         clearTimeout(this._safetyTimer);
         clearTimeout(this._showTimeTimer);
@@ -411,9 +432,7 @@
           clearTimeout(this._colorMatchWindowTimer);
           this._isColorMatch = false;
           this._colorMatchOpenTime = 0;
-          this._divergeColors();
-          this._cycleBotColor();
-          this._cyclePlayerColor();
+          this._divergeBoth();
         }
 
         // Freeze all game timers while the GO! overlay is displayed
@@ -432,7 +451,7 @@
         this._updateScore();
 
         document.getElementById('game-screen').dataset.phase = 'scored';
-        if (document.getElementById('game-screen').dataset.mode === 'classic') {
+        if (['classic', 'hard'].includes(document.getElementById('game-screen').dataset.mode)) {
           this._updateClassicProgress(this._duration - this._learningDuration, this._duration - this._learningDuration);
         }
         const overlay = document.getElementById('showtime-overlay');
@@ -474,7 +493,7 @@
 
         // 0 = elite (tight window, fast start) → 1 = struggling (generous, slower start)
         const difficulty = rxnNorm * 0.35 + (1 - hitRate) * 0.35 + rxnSd * 0.20 + falseSnapRate * 0.10;
-        this._matchWindow       = Math.round(480 + difficulty * 570);
+        this._matchWindow       = Math.round(650 + difficulty * 550);
         this._playerStartFactor = 0.50 + difficulty * 0.35;
 
         if (!this._isExtreme) return;
@@ -489,7 +508,7 @@
         const cRxnSd = colorProfile.sdNorm;
 
         const cDifficulty = cRxnNorm * 0.35 + (1 - cHitRate) * 0.35 + cRxnSd * 0.20 + falseSnapRate * 0.10;
-        this._colorMatchWindow       = Math.round(500 + cDifficulty * 600);
+        this._colorMatchWindow       = Math.round(850 + cDifficulty * 650);
         this._colorPlayerStartFactor = 0.55 + cDifficulty * 0.35;
       },
 
@@ -525,14 +544,21 @@
         clearTimeout(this._botTimer);
         this.botNum = this.playerNum;
         this._setWithPulse('bot-number', this.botNum);
+        if (this._isExtreme) this._cycleBotColor();
         this._checkMatch(true);
       },
 
       _forceColorMatch() {
         clearTimeout(this._botColorTimer);
+        clearTimeout(this._botTimer);
+        clearTimeout(this._playerTimer);
         const matchColor = this._playerColor === this._lastMatchColor
-          ? this._pick(this._colorPalette.filter(color => color !== this._lastMatchColor))
+          ? this._pick(this._activeColorPalette.filter(color => color !== this._lastMatchColor))
           : this._playerColor;
+        this.botNum = this._randInt(1, 100);
+        this._setWithPulse('bot-number', this.botNum);
+        do { this.playerNum = this._randInt(1, 100); } while (this.playerNum === this.botNum);
+        this._setWithPulse('player-number', this.playerNum);
         this._botColor = matchColor;
         this._playerColor = matchColor;
         const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
@@ -581,8 +607,8 @@
 
       _startCountdown() {
         const tick = () => {
-          const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
-          if (isClassic) {
+          const isPhasedMode = ['classic', 'hard'].includes(document.getElementById('game-screen').dataset.mode);
+          if (isPhasedMode) {
             const phaseDuration = this._showTimeFired
               ? this._duration - this._learningDuration
               : this._learningDuration;
@@ -598,6 +624,8 @@
           const m = Math.floor(totalSecs / 60);
           const s = totalSecs % 60;
           document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
+          const fill = document.getElementById('progress-fill');
+          if (fill) fill.style.transform = 'scaleX(' + (remaining / this._duration) + ')';
           if (remaining > 0) this._countdownTimer = setTimeout(tick, 200);
         };
         tick();
@@ -614,8 +642,10 @@
           const nudge = this._showTimeFired ? this.NUDGE_CHANCE : 0.25;
           this.botNum = Math.random() < nudge ? this.playerNum : this._randInt(1, 100);
           this._setWithPulse('bot-number', this.botNum);
+          if (this._isExtreme) this._cycleBotColor();
           this._checkMatch();
-          if (!this.isMatch) this._scheduleBotChange();
+          if (!this.isMatch) this._checkColorMatch();
+          if (!this.isMatch && !this._isColorMatch) this._scheduleBotChange();
         }, this._scaledRandInt(this.BOT_MIN, this.BOT_MAX));
       },
 
@@ -623,8 +653,10 @@
         this._playerTimer = setTimeout(() => {
           this.playerNum = this._randInt(1, 100);
           this._setWithPulse('player-number', this.playerNum);
+          if (this._isExtreme) this._cyclePlayerColor();
           this._checkMatch();
-          if (!this.isMatch) this._schedulePlayerChange();
+          if (!this.isMatch) this._checkColorMatch();
+          if (!this.isMatch && !this._isColorMatch) this._schedulePlayerChange();
         }, this._scaledRandInt(this.PLAY_MIN, this.PLAY_MAX));
       },
 
@@ -640,13 +672,10 @@
         this._resetSafetyTimer();
         this.isMatch = true;
         this._matchOpenTime = Date.now();
+        this._justSnapped = false;
+        clearTimeout(this._greedyTimer);
         if (!this._showTimeFired) this._learningWindows++;
         this._pauseMoving();
-
-        // In extreme, ensure colours differ visually during a number match
-        if (this._isExtreme && this._botColor === this._playerColor) {
-          this._divergeColors();
-        }
 
         this._matchWindowTimer = setTimeout(() => {
           this.isMatch = false;
@@ -669,14 +698,17 @@
         if (!isGuaranteed && !this._canOpenMatch()) return false;
         // Block the same colour matching twice in a row
         if (this._botColor === this._lastMatchColor) {
-          this._divergeColors();
           return false;
         }
 
         clearTimeout(this._botColorTimer);
         clearTimeout(this._playerColorTimer);
+        clearTimeout(this._botTimer);
+        clearTimeout(this._playerTimer);
         this._isColorMatch = true;
         this._colorMatchOpenTime = Date.now();
+        this._justSnapped = false;
+        clearTimeout(this._greedyTimer);
         if (!this._showTimeFired) this._colorLearningWindows++;
         this._resetSafetyTimer();
         this._pauseMoving();
@@ -686,9 +718,9 @@
           this._colorMatchOpenTime = 0;
           this._markMatchClosed();
           this._recordMiss(true);
-          this._divergeColors();
-          this._cycleBotColor();
-          this._cyclePlayerColor();
+          this._divergeBoth();
+          this._scheduleBotChange();
+          this._schedulePlayerChange();
           this._resumeMoving();
         }, this._colorMatchWindow);
 
@@ -701,11 +733,6 @@
         const overlay = document.getElementById('showtime-overlay');
         if (overlay && overlay.style.display !== 'none') return;
 
-        if (this._justSnapped) {
-          this.showMessage(this._pick(this._greedyMessages), 'fail');
-          return;
-        }
-
         if (this.isMatch) {
           if (!this._showTimeFired && this._matchOpenTime > 0) {
             this._learningSamples.push(Date.now() - this._matchOpenTime);
@@ -716,17 +743,18 @@
           this._markMatchClosed();
           this.score += 5;
           this._updateScore();
-          this._glowNumbers();
           this._flashPanels('snap-hit');
-          this._divergeBoth();
 
           this._justSnapped = true;
           clearTimeout(this._greedyTimer);
           this._greedyTimer = setTimeout(() => { this._justSnapped = false; }, this._matchWindow);
 
-          this._scheduleBotChange();
-          this._schedulePlayerChange();
-          this._resumeMoving();
+          this._holdHitFrame(() => {
+            this._divergeBoth();
+            this._scheduleBotChange();
+            this._schedulePlayerChange();
+            this._resumeMoving();
+          });
 
         } else if (this._isColorMatch) {
           if (!this._showTimeFired && this._colorMatchOpenTime > 0) {
@@ -739,17 +767,22 @@
           this._markMatchClosed();
           this.score += 5;
           this._updateScore();
-          this._glowNumbers();
           this._flashPanels('snap-hit');
-          this._divergeColors();
 
           this._justSnapped = true;
           clearTimeout(this._greedyTimer);
           this._greedyTimer = setTimeout(() => { this._justSnapped = false; }, this._colorMatchWindow);
 
-          this._cycleBotColor();
-          this._cyclePlayerColor();
-          this._resumeMoving();
+          this._holdHitFrame(() => {
+            this._divergeBoth();
+            this._scheduleBotChange();
+            this._schedulePlayerChange();
+            this._resumeMoving();
+          });
+
+        } else if (this._justSnapped) {
+          this.showMessage(this._pick(this._greedyMessages), 'fail');
+          return;
 
         } else {
           this._recordMiss(false);
@@ -803,46 +836,37 @@
       // ── Colour cycles ─────────────────────────────────────
 
       _startColorCycles() {
-        this._cycleBotColor();
-        this._cyclePlayerColor();
+        this._cycleBotColor(true);
+        this._cyclePlayerColor(true);
       },
 
-      _cycleBotColor() {
+      _cycleBotColor(avoidMatch = false) {
         const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
-        // Pick a colour different from current; in extreme also avoid a repeat colour match
+        // Pick a colour different from current. In avoidMatch mode, keep colours apart.
         let newColor;
         do {
-          newColor = this._pick(this._colorPalette);
+          newColor = this._pick(this._activeColorPalette);
         } while (
           newColor === this._botColor ||
-          (this._isExtreme && newColor === this._playerColor && newColor === this._lastMatchColor)
+          (avoidMatch && newColor === this._playerColor) ||
+          (newColor === this._playerColor && newColor === this._lastMatchColor)
         );
         this._botColor = newColor;
         if (!isClassic) document.getElementById('bot-number').style.color = newColor;
-        // If a colour match opened, _checkColorMatch clears both timers — return without rescheduling
-        if (this._isExtreme && this._checkColorMatch()) return;
-        const delay = this._isExtreme
-          ? this._scaledColorRandInt(this.BOT_COLOR_MIN, this.BOT_COLOR_MAX)
-          : this._randInt(this.BOT_COLOR_MIN, this.BOT_COLOR_MAX);
-        this._botColorTimer = setTimeout(() => this._cycleBotColor(), delay);
       },
 
-      _cyclePlayerColor() {
+      _cyclePlayerColor(avoidMatch = false) {
         const isClassic = document.getElementById('game-screen').dataset.mode === 'classic';
         let newColor;
         do {
-          newColor = this._pick(this._colorPalette);
+          newColor = this._pick(this._activeColorPalette);
         } while (
           newColor === this._playerColor ||
-          (this._isExtreme && newColor === this._botColor && newColor === this._lastMatchColor)
+          (avoidMatch && newColor === this._botColor) ||
+          (newColor === this._botColor && newColor === this._lastMatchColor)
         );
         this._playerColor = newColor;
         if (!isClassic) document.getElementById('player-number').style.color = newColor;
-        if (this._isExtreme && this._checkColorMatch()) return;
-        const delay = this._isExtreme
-          ? this._scaledColorRandInt(this.PLAY_COLOR_MIN, this.PLAY_COLOR_MAX)
-          : this._randInt(this.PLAY_COLOR_MIN, this.PLAY_COLOR_MAX);
-        this._playerColorTimer = setTimeout(() => this._cyclePlayerColor(), delay);
       },
 
       _stopColorCycles() {
@@ -859,7 +883,7 @@
       _divergeColors() {
         let newColor;
         do {
-          newColor = this._pick(this._colorPalette);
+          newColor = this._pick(this._activeColorPalette);
         } while (newColor === this._botColor || newColor === this._playerColor);
         this._playerColor = newColor;
         if (document.getElementById('game-screen').dataset.mode !== 'classic') {
@@ -927,18 +951,9 @@
       _setWithPulse(id, value) {
         const el = document.getElementById(id);
         el.textContent = value;
-        el.classList.remove('pulse', 'glow');
+        el.classList.remove('pulse');
         void el.offsetWidth;
         el.classList.add('pulse');
-      },
-
-      _glowNumbers() {
-        if (document.getElementById('game-screen').dataset.mode === 'classic') return;
-        ['bot-number', 'player-number'].forEach(id => {
-          const el = document.getElementById(id);
-          el.classList.add('glow');
-          setTimeout(() => el.classList.remove('glow'), 600);
-        });
       },
 
       _flashPanels(cls) {
@@ -974,6 +989,10 @@
         this._setWithPulse('bot-number', this.botNum);
         do { this.playerNum = this._randInt(1, 100); } while (this.playerNum === this.botNum);
         this._setWithPulse('player-number', this.playerNum);
+        if (this._isExtreme) {
+          this._cycleBotColor(true);
+          this._cyclePlayerColor(true);
+        }
       },
 
       _pick(arr) {
@@ -1019,7 +1038,21 @@
       });
       document.getElementById('game-back-btn').addEventListener('click', () => Game.backToHome());
       document.getElementById('play-again-btn').addEventListener('click', () => Game.goToStart());
-      document.getElementById('snap-btn').addEventListener('click', () => Game.handleSnap());
+      const snapBtn = document.getElementById('snap-btn');
+      let snapHandledOnPress = false;
+      snapBtn.addEventListener('pointerdown', e => {
+        if (e.button && e.button !== 0) return;
+        snapHandledOnPress = true;
+        e.preventDefault();
+        Game.handleSnap();
+      });
+      snapBtn.addEventListener('click', () => {
+        if (snapHandledOnPress) {
+          snapHandledOnPress = false;
+          return;
+        }
+        Game.handleSnap();
+      });
 
       document.addEventListener('keydown', e => {
         if (e.repeat || (e.key !== ' ' && e.key !== 'Enter')) return;
