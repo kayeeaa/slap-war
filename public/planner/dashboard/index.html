@@ -47,10 +47,9 @@
       font-family: var(--sans);
       font-weight: 300;
       -webkit-font-smoothing: antialiased;
-      min-height: 100%;
-      display: flex;
-      align-items: safe center;
-      justify-content: center;
+      min-height: 100dvh;
+      display: grid;
+      place-content: start center;
       padding: 30px 18px;
     }
     body::before {
@@ -634,21 +633,130 @@
     .empty-state { font-size: 10px; letter-spacing: 0.22em; color: var(--faint); text-align: center; padding: 32px 0; text-transform: uppercase; }
 
     /* ── Responsive ── */
+
+    /* Tablet */
     @media (max-width: 900px) {
       .hero { grid-template-columns: 1fr; }
       .hero-rail { border-right: none; border-bottom: 1px solid var(--line-soft); }
       .strip { grid-template-columns: 1fr 1fr; }
       .manage-layout { grid-template-columns: 1fr; }
+      .score-grid { grid-template-columns: 1fr; }
       .hud-title { font-size: 30px; }
+      .recur-grid { grid-template-columns: 1fr; }
+      .approval { grid-template-columns: 1fr 1fr; row-gap: 12px; }
+      .appr-pts { grid-column: 1; }
+      .appr-actions { grid-column: 2; justify-content: flex-end; }
     }
+
+    /* Small tablet / large phone */
+    @media (max-width: 760px) {
+      /* Schedule grid: horizontal scroll so all 7 days stay visible */
+      .sched-cols {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        gap: 8px;
+        padding-bottom: 6px;
+        scrollbar-width: none;
+      }
+      .sched-cols::-webkit-scrollbar { display: none; }
+      .sched-col {
+        min-width: 130px;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
+      .wv-nav { flex-wrap: wrap; }
+      .hud { gap: 12px; }
+      .hud-right { gap: 8px; }
+    }
+
+    /* Mobile */
     @media (max-width: 600px) {
-      body { padding: 0; }
+      body { padding: 0; overflow-x: hidden; }
       .frame { border-radius: 0; padding: 0; }
       .window { border-radius: 0; }
-      .app { padding: 20px 18px 24px; }
+      .app { padding: 16px 14px 22px; }
+
+      /* Titlebar */
+      .titlebar { padding: 10px 14px; gap: 10px; }
+      .tb-name { font-size: 9px; letter-spacing: 0.22em; }
+
+      /* Tabs */
+      .tabs { padding: 0 12px; overflow-x: auto; scrollbar-width: none; }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tab { padding: 13px 12px 11px; font-size: 10px; letter-spacing: 0.18em; }
+
+      /* HUD */
+      .hud { gap: 10px; margin-bottom: 18px; }
+      .hud-left { gap: 10px; }
+      .hud-logo { display: none; }
+      .eyebrow { font-size: 9px; margin-bottom: 5px; }
+      .hud-title { font-size: 24px; }
+      .hud-sub { font-size: 9px; margin-top: 6px; }
+      .hud-right { gap: 6px; width: 100%; }
+      .players { gap: 5px; }
+      .pill { padding: 7px 10px; font-size: 9px; letter-spacing: 0.14em; min-height: 36px; }
+      .fam-btn { padding: 7px 10px; font-size: 9px; letter-spacing: 0.14em; min-height: 36px; }
+      .wk-btn { width: 36px; height: 36px; }
+      .wk-this-btn { padding: 6px 10px; font-size: 9px; }
+      .week-nav { gap: 6px; }
+
+      /* Hero */
+      .hero-rail { padding: 18px 16px; }
+      .hero-day { font-size: 26px; margin-top: 10px; }
+      .hero-date { font-size: 9.5px; margin-top: 6px; }
+      .hero-count-n { font-size: 36px; }
+      .hero-count-l { font-size: 8.5px; }
+      .hero-list { padding: 8px 14px; }
+      .ev { grid-template-columns: 44px 22px 1fr; gap: 10px; padding: 11px 4px; }
+      .ev-time { font-size: 16px; }
+      .ev-title { font-size: 15px; }
+
+      /* Week strip */
       .strip { grid-template-columns: 1fr; }
+      .day-card { padding: 12px 14px 12px; min-height: 110px; }
+      .solo-icon { font-size: 32px; }
+      .solo-title { font-size: 16px; }
+
+      /* Chores */
+      .section-title { font-size: 24px; }
+      .tab-head { gap: 12px; }
+      .approval { grid-template-columns: 1fr; gap: 10px; }
+      .appr-pts { grid-column: auto; }
+      .appr-actions { grid-column: auto; justify-content: flex-start; }
+      .score-head { padding: 14px 16px; }
+      .score-mono { width: 42px; height: 42px; font-size: 19px; }
+      .score-name { font-size: 19px; }
+      .score-total b { font-size: 28px; }
+
+      /* Manage */
+      .manage-heading { font-size: 24px; }
+      .seg button { padding: 8px 14px; font-size: 10px; }
+      .recur-form { padding: 14px 14px; }
+      .recur-form-title { font-size: 16px; margin-bottom: 12px; }
       .type-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; }
-      .hud-title { font-size: 26px; }
+      .type-btn { padding: 7px 2px 6px; }
+      .type-btn .t-ico { font-size: 14px; }
+      .type-btn .t-lbl { font-size: 6.5px; }
+      .dow-pill { width: 34px; height: 34px; font-size: 7.5px; }
+      .person-chip { padding: 5px 10px; font-size: 9px; letter-spacing: 0.1em; }
+      .submit-btn { font-size: 10px; padding: 11px; }
+      .form-label { font-size: 8.5px; }
+      .inp { font-size: 12px; padding: 9px 11px; }
+      select.inp { padding-right: 26px; }
+
+      /* Sched grid: smaller columns on narrow phones */
+      .sched-col { min-width: 110px; }
+    }
+
+    /* Small phones */
+    @media (max-width: 400px) {
+      .hud-title { font-size: 20px; }
+      .pill, .fam-btn { font-size: 8.5px; padding: 6px 8px; }
+      .type-grid { grid-template-columns: repeat(4, 1fr); }
+      .app { padding: 14px 10px 20px; }
+      .hero-day { font-size: 22px; }
     }
   </style>
 </head>
