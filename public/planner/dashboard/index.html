@@ -3,21 +3,1270 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>House of Kay — Dashboard</title>
+  <title>Family OS // Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/supabase-config.js"></script>
   <style>
-    /* styles go here */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #08090f;
+      min-height: 100dvh;
+      display: grid;
+      place-content: start center;
+      font-family: 'Share Tech Mono', monospace;
+      padding: 16px;
+    }
+
+    .window-outer {
+      width: 100%;
+      padding: 2px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #00dcff, #44dd88, #ff3d8a, #f0c040);
+    }
+
+    .window {
+      width: 100%;
+      background: #0c0e15;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* ── Titlebar ── */
+    .titlebar {
+      background: #090b12;
+      border-bottom: 1px solid rgba(0,220,255,0.2);
+      padding: 11px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .traffic-lights { display: flex; gap: 6px; flex-shrink: 0; }
+    .tl { width: 11px; height: 11px; border-radius: 50%; }
+    .tl.red    { background: #ff5f56; }
+    .tl.yellow { background: #ffbd2e; }
+    .tl.green  { background: #27c93f; }
+    .titlebar-text {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: #2a3a52;
+      flex: 1;
+      text-align: center;
+    }
+    .titlebar-user {
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid;
+      flex-shrink: 0;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: #090b12;
+      border-bottom: 1px solid rgba(0,220,255,0.1);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 11px 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #2a3a52;
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab:hover { color: #4a6a8a; }
+    .tab.active {
+      color: #00dcff;
+      border-bottom-color: #00dcff;
+      background: rgba(0,220,255,0.05);
+    }
+
+    /* ── Panels ── */
+    .panel { display: none; padding: 24px; }
+    .panel.active { display: block; }
+
+    /* ── Calendar ── */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .cal-month {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 0.1em;
+      color: #e8eef8;
+    }
+    .cal-nav { display: flex; align-items: center; gap: 8px; }
+    .cal-nav-btn {
+      background: #090b12;
+      border: 1px solid rgba(0,220,255,0.2);
+      border-radius: 6px;
+      color: #00dcff;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .cal-nav-btn:hover { background: rgba(0,220,255,0.1); border-color: #00dcff; }
+    .today-btn {
+      background: #090b12;
+      border: 1px solid rgba(0,220,255,0.2);
+      border-radius: 6px;
+      color: #00dcff;
+      padding: 4px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .today-btn:hover { background: rgba(0,220,255,0.1); border-color: #00dcff; }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: rgba(0,220,255,0.07);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .cal-dow {
+      background: #090b12;
+      text-align: center;
+      padding: 8px 2px;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: #2a3a52;
+    }
+    .cal-day {
+      background: #0c0e15;
+      min-height: 82px;
+      padding: 5px 4px;
+      cursor: default;
+    }
+    .cal-day.other-month { background: #0a0b12; opacity: 0.45; }
+    .cal-day.today { background: #0e1122; }
+
+    .day-num {
+      font-size: 10px;
+      color: #2a3a52;
+      display: block;
+      margin-bottom: 3px;
+      line-height: 1;
+    }
+    .day-num-today {
+      background: #00dcff;
+      color: #0c0e15;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    /* ── Event pills ── */
+    .event-pill {
+      display: block;
+      font-size: 8px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin-bottom: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #08090f;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      transition: opacity 0.1s, transform 0.08s;
+      user-select: none;
+    }
+    .event-pill:hover { opacity: 0.82; transform: scale(1.03); }
+    .more-pill {
+      font-size: 7px;
+      color: #2a3a52;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      padding: 1px 2px;
+    }
+    .more-pill:hover { color: #00dcff; }
+
+    /* ── Popover ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      display: none;
+    }
+    .overlay.visible { display: block; }
+
+    .popover {
+      position: fixed;
+      z-index: 100;
+      background: #0f1220;
+      border: 1px solid rgba(0,220,255,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      width: 240px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      display: none;
+    }
+    .popover.visible { display: block; }
+    .popover-close {
+      position: absolute;
+      top: 10px; right: 12px;
+      background: none;
+      border: none;
+      color: #2a3a52;
+      font-size: 13px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px;
+      transition: color 0.12s;
+    }
+    .popover-close:hover { color: #e8eef8; }
+    .popover-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: #e8eef8;
+      margin-bottom: 8px;
+      padding-right: 20px;
+      letter-spacing: 0.05em;
+      line-height: 1.2;
+    }
+    .popover-meta {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: #3a5470;
+      margin-bottom: 3px;
+      min-height: 12px;
+    }
+    .popover-attendees {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin: 8px 0 6px;
+    }
+    .attendee-chip {
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      padding: 2px 7px;
+      border-radius: 10px;
+      border: 1px solid;
+      font-weight: 700;
+    }
+    .popover-delete {
+      margin-top: 10px;
+      width: 100%;
+      background: rgba(255,64,112,0.08);
+      border: 1px solid rgba(255,64,112,0.25);
+      color: #ff4070;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      padding: 7px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .popover-delete:hover { background: rgba(255,64,112,0.18); border-color: #ff4070; }
+
+    /* ── Manage tab ── */
+    .section-heading {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      color: #00dcff;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0,220,255,0.12);
+    }
+    .form-row { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: #2a3a52;
+      margin-bottom: 7px;
+    }
+
+    /* Type grid */
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .type-btn {
+      background: #090b12;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 7px;
+      padding: 8px 4px 7px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .type-btn:hover { border-color: rgba(0,220,255,0.3); background: rgba(0,220,255,0.04); }
+    .type-btn.selected { border-color: #00dcff; background: rgba(0,220,255,0.1); }
+    .type-btn .t-icon { font-size: 15px; display: block; margin-bottom: 3px; line-height: 1; }
+    .type-btn .t-label { font-size: 7px; letter-spacing: 0.08em; color: #2a3a52; display: block; text-transform: uppercase; }
+    .type-btn.selected .t-label { color: #00dcff; }
+
+    /* Inputs */
+    .form-input {
+      width: 100%;
+      background: #090b12;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 7px;
+      padding: 9px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: #e8eef8;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+      color-scheme: dark;
+    }
+    .form-input:focus { border-color: rgba(0,220,255,0.45); }
+    .form-input::placeholder { color: #1e2d40; }
+
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* Toggle */
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .toggle-label { font-size: 9px; letter-spacing: 0.15em; color: #2a3a52; }
+    .toggle {
+      appearance: none; -webkit-appearance: none;
+      width: 36px; height: 19px;
+      background: #090b12;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle:checked { background: #00dcff; border-color: #00dcff; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 13px; height: 13px;
+      background: #2a3a52;
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle:checked::after { transform: translateX(17px); background: #0c0e15; }
+
+    /* Select */
+    .form-select {
+      width: 100%;
+      background: #090b12;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 7px;
+      padding: 9px 32px 9px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: #e8eef8;
+      outline: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath stroke='%232a3a52' stroke-width='1.5' fill='none' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      color-scheme: dark;
+    }
+    .form-select:focus { border-color: rgba(0,220,255,0.45); }
+
+    /* Day-of-week pills */
+    .dow-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dow-pill {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: #090b12;
+      border: 1px solid rgba(255,255,255,0.05);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.05em;
+      color: #2a3a52;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dow-pill:hover { border-color: rgba(0,220,255,0.3); color: #6ab0d0; }
+    .dow-pill.selected { background: rgba(0,220,255,0.12); border-color: #00dcff; color: #00dcff; }
+
+    /* Person chips */
+    .person-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .person-chip {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+      opacity: 0.35;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .person-chip.selected { opacity: 1; }
+
+    /* Submit */
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,220,255,0.08);
+      border: 1px solid rgba(0,220,255,0.35);
+      border-radius: 8px;
+      color: #00dcff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      margin-top: 6px;
+    }
+    .submit-btn:hover { background: rgba(0,220,255,0.16); border-color: #00dcff; }
+    .submit-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    .form-msg {
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      min-height: 14px;
+      margin-top: 8px;
+      text-align: center;
+    }
+    .form-msg.ok  { color: #44dd88; }
+    .form-msg.err { color: #ff4070; }
+
+    /* Events list */
+    .events-list { margin-top: 28px; }
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.04);
+      background: #090b12;
+      margin-bottom: 6px;
+    }
+    .event-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .event-info { flex: 1; min-width: 0; }
+    .event-item-title { font-size: 11px; color: #e8eef8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-item-meta { font-size: 8px; letter-spacing: 0.1em; color: #2a3a52; margin-top: 2px; }
+    .type-tag {
+      font-size: 7px;
+      letter-spacing: 0.08em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(0,220,255,0.07);
+      color: #00dcff;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .event-del-btn {
+      background: none;
+      border: none;
+      color: #1e2d40;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px;
+      flex-shrink: 0;
+      transition: color 0.12s;
+    }
+    .event-del-btn:hover { color: #ff4070; }
+
+    /* Chores placeholder */
+    .coming-soon { text-align: center; padding: 60px 20px; }
+    .coming-soon-icon { font-size: 38px; margin-bottom: 14px; opacity: 0.25; }
+    .coming-soon-text {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: 0.2em;
+      color: #2a3a52;
+    }
+
+    /* Utility */
+    .empty-state { font-size: 9px; letter-spacing: 0.2em; color: #1e2d40; text-align: center; padding: 32px 0; }
+    .hidden { display: none !important; }
+
+    /* Manage two-column wrapper — stacked by default */
+    .manage-layout { display: block; }
+    .manage-form   { }
+    .manage-aside  { }
+
+    /* ── Desktop ── */
+    @media (min-width: 768px) {
+      body { padding: 28px 32px; }
+
+      .tab { padding: 13px 26px; font-size: 11px; }
+
+      .panel { padding: 32px; }
+
+      .cal-month { font-size: 28px; }
+      .cal-dow { padding: 10px 4px; font-size: 10px; letter-spacing: 0.15em; }
+      .cal-day { min-height: 110px; padding: 7px 6px; }
+      .day-num { font-size: 12px; }
+      .day-num-today { width: 22px; height: 22px; font-size: 11px; }
+      .event-pill { font-size: 10px; padding: 3px 6px; margin-bottom: 3px; }
+      .more-pill  { font-size: 9px; }
+
+      .section-heading { font-size: 15px; }
+      .form-label { font-size: 10px; }
+      .form-input { font-size: 13px; padding: 11px 14px; }
+      .form-select { font-size: 12px; padding: 11px 34px 11px 14px; }
+      .type-btn { padding: 10px 6px 9px; }
+      .type-btn .t-icon { font-size: 18px; }
+      .type-btn .t-label { font-size: 8px; }
+      .dow-pill { width: 38px; height: 38px; font-size: 9px; }
+      .person-chip { font-size: 11px; padding: 6px 16px; }
+      .submit-btn { font-size: 12px; padding: 14px; }
+      .event-item-title { font-size: 12px; }
+      .event-item-meta  { font-size: 9px; }
+      .type-tag { font-size: 8px; }
+
+      /* Two-column manage layout */
+      .manage-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        align-items: start;
+      }
+      .manage-aside .events-list { margin-top: 0; }
+    }
+
+    @media (min-width: 1200px) {
+      body { padding: 32px 48px; }
+      .cal-day { min-height: 130px; }
+      .type-grid { grid-template-columns: repeat(10, 1fr); }
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .window-outer { border-radius: 0; padding: 0; }
+      .window { border-radius: 0; }
+      .panel { padding: 14px; }
+      .type-grid { gap: 4px; }
+      .cal-day { min-height: 62px; }
+      .tab { padding: 10px 14px; font-size: 9px; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Dashboard UI goes here -->
+<div class="window-outer">
+<div class="window">
 
-  <script>
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <div class="titlebar">
+    <div class="traffic-lights">
+      <div class="tl red"></div>
+      <div class="tl yellow"></div>
+      <div class="tl green"></div>
+    </div>
+    <div class="titlebar-text">FAMILY OS // PLANNER.EXE</div>
+    <div class="titlebar-user" id="userChip"></div>
+  </div>
 
-    // logic goes here
-  </script>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="all">ALL</button>
+    <button class="tab" data-tab="adults">KAY &amp; DANNY</button>
+    <button class="tab" data-tab="kids">KIDS</button>
+    <button class="tab" data-tab="chores">CHORES</button>
+    <button class="tab" data-tab="manage">MANAGE</button>
+  </div>
+
+  <div class="panel active" id="panel-all">
+    <div class="empty-state" id="cal-all-loading">LOADING EVENTS...</div>
+    <div id="cal-all"></div>
+  </div>
+
+  <div class="panel" id="panel-adults">
+    <div id="cal-adults"></div>
+  </div>
+
+  <div class="panel" id="panel-kids">
+    <div id="cal-kids"></div>
+  </div>
+
+  <div class="panel" id="panel-chores">
+    <div class="coming-soon">
+      <div class="coming-soon-icon">🧹</div>
+      <div class="coming-soon-text">CHORES — COMING SOON</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-manage">
+    <div class="manage-layout">
+
+      <div class="manage-form">
+        <div class="section-heading">ADD EVENT</div>
+
+        <div class="form-row">
+          <label class="form-label">EVENT TYPE</label>
+          <div class="type-grid" id="typeGrid"></div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">TITLE</label>
+          <input class="form-input" type="text" id="fTitle" placeholder="Event title..." />
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">DATE</label>
+          <input class="form-input" type="date" id="fDate" />
+        </div>
+
+        <div class="toggle-row">
+          <input type="checkbox" class="toggle" id="fAllDay" checked />
+          <label class="toggle-label" for="fAllDay">ALL DAY</label>
+        </div>
+
+        <div class="form-row-2 form-row hidden" id="timeFields">
+          <div>
+            <label class="form-label">START TIME</label>
+            <input class="form-input" type="time" id="fStart" />
+          </div>
+          <div>
+            <label class="form-label">END TIME</label>
+            <input class="form-input" type="time" id="fEnd" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">RECURRENCE</label>
+          <select class="form-select" id="fRecurrence">
+            <option value="none">One-off</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Every 2 weeks</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+
+        <div class="form-row hidden" id="dowRow">
+          <label class="form-label">REPEAT ON</label>
+          <div class="dow-pills" id="dowPills"></div>
+        </div>
+
+        <div class="form-row hidden" id="recEndRow">
+          <label class="form-label">END DATE</label>
+          <input class="form-input" type="date" id="fRecEnd" />
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">FOR</label>
+          <div class="person-chips" id="personChips"></div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">NOTES <span style="opacity:0.4">(OPTIONAL)</span></label>
+          <input class="form-input" type="text" id="fNotes" placeholder="Any extra details..." />
+        </div>
+
+        <button class="submit-btn" id="submitBtn">+ ADD EVENT</button>
+        <div class="form-msg" id="formMsg"></div>
+      </div>
+
+      <div class="manage-aside">
+        <div class="events-list">
+          <div class="section-heading">UPCOMING EVENTS</div>
+          <div id="eventsList"><div class="empty-state">LOADING...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Popover -->
+<div class="overlay" id="overlay"></div>
+<div class="popover" id="popover">
+  <button class="popover-close" id="popClose">✕</button>
+  <div class="popover-title" id="popTitle"></div>
+  <div class="popover-meta" id="popType"></div>
+  <div class="popover-meta" id="popDate"></div>
+  <div class="popover-meta" id="popTime"></div>
+  <div class="popover-attendees" id="popAttendees"></div>
+  <div class="popover-meta" id="popRecurrence"></div>
+  <div class="popover-meta" id="popNotes"></div>
+  <button class="popover-delete" id="popDelete">DELETE EVENT</button>
+</div>
+
+<script>
+  // ── Auth guard ─────────────────────────────────────────────────
+  const ME = JSON.parse(sessionStorage.getItem('hok_user') || 'null');
+  if (!ME || ME.role === 'child') window.location.replace('/planner');
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ── Constants ─────────────────────────────────────────────────
+  const FAMILY_DISPLAY = {
+    kay:    { name: 'Kay',    color: '#ff3d8a' },
+    danny:  { name: 'Danny',  color: '#44dd88' },
+    jenson: { name: 'Jenson', color: '#00dcff' },
+    roux:   { name: 'Roux',   color: '#f0c040' },
+  };
+
+  const EVENT_TYPES = [
+    { key: 'lunch',          icon: '🥪', label: 'Lunch'     },
+    { key: 'pe',             icon: '🏃', label: 'PE'        },
+    { key: 'dad_collection', icon: '🚗', label: 'Dad Pick'  },
+    { key: 'dad_weekend',    icon: '🏠', label: 'Dad W/E'   },
+    { key: 'dinner',         icon: '🍽️', label: 'Dinner'    },
+    { key: 'appointment',    icon: '🏥', label: 'Appt'      },
+    { key: 'school_event',   icon: '🎒', label: 'School'    },
+    { key: 'personal',       icon: '⭐', label: 'Personal'  },
+    { key: 'family',         icon: '🏡', label: 'Family'    },
+    { key: 'other',          icon: '📌', label: 'Other'     },
+  ];
+
+  const DOW_SHORT  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const MONTH_NAMES = ['January','February','March','April','May','June',
+                       'July','August','September','October','November','December'];
+
+  // ── State ─────────────────────────────────────────────────────
+  let usersMap  = {};   // uuid → { id, name, color, role }
+  let allEvents = [];   // raw DB rows with event_attendees embedded
+  let viewYear  = new Date().getFullYear();
+  let viewMonth = new Date().getMonth();
+  let openEventId = null;
+
+  // Form
+  let selType    = null;
+  let selPersons = new Set();   // family keys e.g. 'kay'
+  let selDows    = new Set();   // 'Mon','Tue'...
+
+  // ── Boot ──────────────────────────────────────────────────────
+  async function boot() {
+    renderUserChip();
+    buildTypeGrid();
+    buildDowPills();
+    wireFormUI();
+    wireTabs();
+    wirePopover();
+    document.getElementById('fDate').value = today();
+
+    const { data: users } = await sb.from('users').select('id, name, color, role');
+    if (users) users.forEach(u => { usersMap[u.id] = u; });
+
+    buildPersonChips();
+    await loadEvents();
+  }
+
+  function renderUserChip() {
+    const chip = document.getElementById('userChip');
+    chip.textContent = (ME.name || 'USER').toUpperCase();
+    const col = ME.color || '#00dcff';
+    chip.style.color = col;
+    chip.style.borderColor = col;
+  }
+
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function ymd(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  // ── Load ──────────────────────────────────────────────────────
+  async function loadEvents() {
+    const { data, error } = await sb
+      .from('events')
+      .select('*, event_attendees(user_id)')
+      .order('date', { ascending: true });
+
+    if (!error && data) allEvents = data;
+    document.getElementById('cal-all-loading').style.display = 'none';
+    renderCalendar('all');
+    renderEventsList();
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────
+  function wireTabs() {
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('panel-' + tab).classList.add('active');
+        if (tab === 'all' || tab === 'adults' || tab === 'kids') renderCalendar(tab);
+      });
+    });
+  }
+
+  // ── Calendar ──────────────────────────────────────────────────
+  function filterForTab(tab) {
+    if (tab === 'all') return allEvents;
+    const kidIds   = Object.entries(usersMap).filter(([,u]) => u.role === 'child').map(([id]) => id);
+    const adultIds = Object.entries(usersMap).filter(([,u]) => u.role !== 'child').map(([id]) => id);
+    const ids = tab === 'kids' ? kidIds : adultIds;
+    return allEvents.filter(ev => ev.event_attendees.some(a => ids.includes(a.user_id)));
+  }
+
+  function expandToMonth(events, year, month) {
+    const mStart = new Date(year, month, 1);
+    const mEnd   = new Date(year, month + 1, 0);
+    const out    = [];
+
+    events.forEach(ev => {
+      const evStart = new Date(ev.date + 'T00:00:00');
+      const recEnd  = ev.recurrence_end ? new Date(ev.recurrence_end + 'T00:00:00') : null;
+
+      if (!ev.recurrence_type || ev.recurrence_type === 'none') {
+        if (evStart >= mStart && evStart <= mEnd) {
+          out.push({ ...ev, _occ: ev.date });
+        }
+        return;
+      }
+
+      const scanEnd = recEnd ? new Date(Math.min(mEnd, recEnd)) : mEnd;
+      const d = new Date(Math.max(evStart, mStart));
+      while (d <= scanEnd) {
+        if (occursOn(ev, d, evStart)) out.push({ ...ev, _occ: ymd(d) });
+        d.setDate(d.getDate() + 1);
+      }
+    });
+
+    return out;
+  }
+
+  function occursOn(ev, d, origin) {
+    const dow = DOW_SHORT[(d.getDay() + 6) % 7]; // Mon=0
+    switch (ev.recurrence_type) {
+      case 'daily':
+        return true;
+      case 'weekly':
+        return !ev.recurrence_days || ev.recurrence_days.length === 0
+          ? d.getDay() === origin.getDay()
+          : ev.recurrence_days.includes(dow);
+      case 'biweekly': {
+        const weeksDiff = Math.floor((d - origin) / 604800000);
+        const dayOk = !ev.recurrence_days || ev.recurrence_days.length === 0
+          ? d.getDay() === origin.getDay()
+          : ev.recurrence_days.includes(dow);
+        return dayOk && weeksDiff % 2 === 0;
+      }
+      case 'monthly':
+        return d.getDate() === origin.getDate();
+      default:
+        return false;
+    }
+  }
+
+  function renderCalendar(tab) {
+    const el = document.getElementById('cal-' + tab);
+    if (!el) return;
+
+    const events   = filterForTab(tab);
+    const expanded = expandToMonth(events, viewYear, viewMonth);
+
+    const byDate = {};
+    expanded.forEach(ev => {
+      (byDate[ev._occ] = byDate[ev._occ] || []).push(ev);
+    });
+
+    const monthLabel  = MONTH_NAMES[viewMonth].toUpperCase() + ' ' + viewYear;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const prevDays    = new Date(viewYear, viewMonth, 0).getDate();
+    let   startDow    = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // Mon=0
+    const todayStr    = today();
+
+    let html = `
+      <div class="cal-header">
+        <div class="cal-month">${monthLabel}</div>
+        <div class="cal-nav">
+          <button class="today-btn" onclick="goToday()">TODAY</button>
+          <button class="cal-nav-btn" onclick="shiftMonth(-1)">&#8249;</button>
+          <button class="cal-nav-btn" onclick="shiftMonth(1)">&#8250;</button>
+        </div>
+      </div>
+      <div class="cal-grid">
+    `;
+
+    DOW_SHORT.forEach(d => { html += `<div class="cal-dow">${d}</div>`; });
+
+    // Leading filler
+    for (let i = 0; i < startDow; i++) {
+      const d = prevDays - startDow + i + 1;
+      html += `<div class="cal-day other-month"><span class="day-num">${d}</span></div>`;
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr  = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday  = dateStr === todayStr;
+      const dayEvs   = byDate[dateStr] || [];
+      const visible  = dayEvs.slice(0, 3);
+      const overflow = dayEvs.length - 3;
+
+      html += `<div class="cal-day${isToday ? ' today' : ''}">`;
+      html += isToday
+        ? `<span class="day-num-today">${d}</span>`
+        : `<span class="day-num">${d}</span>`;
+
+      visible.forEach(ev => { html += pillHtml(ev); });
+      if (overflow > 0) html += `<div class="more-pill">+${overflow}</div>`;
+      html += '</div>';
+    }
+
+    // Trailing filler
+    const total    = startDow + daysInMonth;
+    const trailing = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let i = 1; i <= trailing; i++) {
+      html += `<div class="cal-day other-month"><span class="day-num">${i}</span></div>`;
+    }
+
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function pillHtml(ev) {
+    const color    = pillColor(ev.event_attendees.map(a => a.user_id));
+    const typeInfo = EVENT_TYPES.find(t => t.key === ev.event_type) || { icon: '📌' };
+    const safe     = esc(ev.title);
+    return `<div class="event-pill" style="background:${color}"
+      onclick="openPopover(event,this,'${ev.id}','${ev._occ}')"
+      title="${safe}">${typeInfo.icon} ${safe}</div>`;
+  }
+
+  function pillColor(ids) {
+    if (!ids || !ids.length) return '#00dcff';
+    for (const id of ids) {
+      if (usersMap[id]?.color) return usersMap[id].color;
+    }
+    return '#00dcff';
+  }
+
+  function shiftMonth(delta) {
+    viewMonth += delta;
+    if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+    if (viewMonth > 11) { viewMonth = 0;  viewYear++; }
+    ['all','adults','kids'].forEach(renderCalendar);
+  }
+
+  function goToday() {
+    viewYear  = new Date().getFullYear();
+    viewMonth = new Date().getMonth();
+    ['all','adults','kids'].forEach(renderCalendar);
+  }
+
+  // ── Popover ───────────────────────────────────────────────────
+  function wirePopover() {
+    document.getElementById('overlay').addEventListener('click', closePopover);
+    document.getElementById('popClose').addEventListener('click', closePopover);
+    document.getElementById('popDelete').addEventListener('click', deleteOpenEvent);
+  }
+
+  function openPopover(evt, el, id, occDate) {
+    evt.stopPropagation();
+    const ev = allEvents.find(e => e.id === id);
+    if (!ev) return;
+    openEventId = id;
+
+    const typeInfo = EVENT_TYPES.find(t => t.key === ev.event_type) || { icon: '📌', label: ev.event_type };
+    document.getElementById('popTitle').textContent = ev.title;
+    document.getElementById('popType').textContent  = typeInfo.icon + ' ' + typeInfo.label.toUpperCase();
+    document.getElementById('popDate').textContent  = fmtDate(occDate);
+    document.getElementById('popTime').textContent  = ev.all_day
+      ? 'ALL DAY'
+      : [(ev.start_time || ''), (ev.end_time || '')].filter(Boolean).join(' – ');
+    document.getElementById('popNotes').textContent = ev.description || '';
+
+    const recType = ev.recurrence_type;
+    document.getElementById('popRecurrence').textContent = recType && recType !== 'none'
+      ? '↺ ' + recType.toUpperCase() + (ev.recurrence_end ? ' UNTIL ' + fmtDate(ev.recurrence_end) : '')
+      : '';
+
+    const atEl = document.getElementById('popAttendees');
+    atEl.innerHTML = ev.event_attendees.map(a => {
+      const u = usersMap[a.user_id];
+      if (!u) return '';
+      return `<span class="attendee-chip" style="color:${u.color};border-color:${u.color};background:${u.color}22">${u.name.toUpperCase()}</span>`;
+    }).join('');
+
+    // Position
+    const pop  = document.getElementById('popover');
+    const rect = el.getBoundingClientRect();
+    const top  = Math.min(rect.bottom + 6, window.innerHeight - 270);
+    const left = Math.min(rect.left,       window.innerWidth  - 252);
+    pop.style.top  = Math.max(6, top)  + 'px';
+    pop.style.left = Math.max(6, left) + 'px';
+    pop.classList.add('visible');
+    document.getElementById('overlay').classList.add('visible');
+  }
+
+  function closePopover() {
+    document.getElementById('popover').classList.remove('visible');
+    document.getElementById('overlay').classList.remove('visible');
+    openEventId = null;
+  }
+
+  async function deleteOpenEvent() {
+    if (!openEventId) return;
+    const btn = document.getElementById('popDelete');
+    btn.textContent = 'DELETING...';
+    await sb.from('events').delete().eq('id', openEventId);
+    allEvents = allEvents.filter(e => e.id !== openEventId);
+    closePopover();
+    ['all','adults','kids'].forEach(renderCalendar);
+    renderEventsList();
+  }
+
+  function fmtDate(ymdStr) {
+    if (!ymdStr) return '';
+    const [y, m, d] = ymdStr.split('-');
+    return `${parseInt(d)} ${MONTH_NAMES[parseInt(m)-1].slice(0,3).toUpperCase()} ${y}`;
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Manage form ───────────────────────────────────────────────
+  function buildTypeGrid() {
+    document.getElementById('typeGrid').innerHTML = EVENT_TYPES.map(t =>
+      `<button class="type-btn" data-key="${t.key}" onclick="pickType('${t.key}')">
+        <span class="t-icon">${t.icon}</span>
+        <span class="t-label">${t.label}</span>
+      </button>`
+    ).join('');
+  }
+
+  function pickType(key) {
+    selType = key;
+    document.querySelectorAll('.type-btn').forEach(b =>
+      b.classList.toggle('selected', b.dataset.key === key)
+    );
+    const ti = EVENT_TYPES.find(t => t.key === key);
+    const titleEl = document.getElementById('fTitle');
+    const currentMatchesType = EVENT_TYPES.some(t => titleEl.value === t.label);
+    if (!titleEl.value || currentMatchesType) titleEl.value = ti ? ti.label : '';
+  }
+
+  function buildPersonChips() {
+    const container = document.getElementById('personChips');
+    // Build chips from FAMILY_DISPLAY, matching to usersMap by name for later ID lookup
+    container.innerHTML = Object.entries(FAMILY_DISPLAY).map(([key, f]) =>
+      `<button class="person-chip" data-pkey="${key}"
+        style="color:${f.color};border-color:${f.color};background:${f.color}15"
+        onclick="togglePerson('${key}')">${f.name.toUpperCase()}</button>`
+    ).join('');
+  }
+
+  function togglePerson(key) {
+    if (selPersons.has(key)) selPersons.delete(key);
+    else selPersons.add(key);
+    document.querySelectorAll('.person-chip').forEach(c =>
+      c.classList.toggle('selected', selPersons.has(c.dataset.pkey))
+    );
+  }
+
+  function buildDowPills() {
+    document.getElementById('dowPills').innerHTML = DOW_SHORT.map(d =>
+      `<button class="dow-pill" data-dow="${d}" onclick="toggleDow('${d}')">${d.slice(0,2)}</button>`
+    ).join('');
+  }
+
+  function toggleDow(d) {
+    if (selDows.has(d)) selDows.delete(d);
+    else selDows.add(d);
+    document.querySelectorAll('.dow-pill').forEach(p =>
+      p.classList.toggle('selected', selDows.has(p.dataset.dow))
+    );
+  }
+
+  function wireFormUI() {
+    document.getElementById('fAllDay').addEventListener('change', e => {
+      document.getElementById('timeFields').classList.toggle('hidden', e.target.checked);
+    });
+    document.getElementById('fRecurrence').addEventListener('change', e => {
+      const r = e.target.value;
+      document.getElementById('recEndRow').classList.toggle('hidden', r === 'none');
+      document.getElementById('dowRow').classList.toggle('hidden', r !== 'weekly' && r !== 'biweekly');
+    });
+    document.getElementById('submitBtn').addEventListener('click', submitEvent);
+  }
+
+  async function submitEvent() {
+    const title  = document.getElementById('fTitle').value.trim();
+    const date   = document.getElementById('fDate').value;
+    const allDay = document.getElementById('fAllDay').checked;
+    const rec    = document.getElementById('fRecurrence').value;
+    const recEnd = document.getElementById('fRecEnd').value || null;
+    const notes  = document.getElementById('fNotes').value.trim() || null;
+    const start  = document.getElementById('fStart').value || null;
+    const end    = document.getElementById('fEnd').value || null;
+
+    if (!selType)          { msg('SELECT AN EVENT TYPE', 'err'); return; }
+    if (!title)            { msg('ENTER A TITLE', 'err'); return; }
+    if (!date)             { msg('ENTER A DATE', 'err'); return; }
+    if (!selPersons.size)  { msg('SELECT AT LEAST ONE PERSON', 'err'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'SAVING...';
+
+    const payload = {
+      created_by:      ME.id,
+      title,
+      event_type:      selType,
+      description:     notes,
+      date,
+      start_time:      allDay ? null : start,
+      end_time:        allDay ? null : end,
+      all_day:         allDay,
+      recurrence_type: rec,
+      recurrence_days: (rec === 'weekly' || rec === 'biweekly') ? [...selDows] : null,
+      recurrence_end:  rec !== 'none' ? recEnd : null,
+    };
+
+    const { data: saved, error } = await sb.from('events').insert(payload).select().single();
+
+    if (error) {
+      msg('ERROR: ' + error.message, 'err');
+      btn.disabled = false;
+      btn.textContent = '+ ADD EVENT';
+      return;
+    }
+
+    // Resolve person keys → user IDs
+    const personIds = [...selPersons].map(key => {
+      const displayName = FAMILY_DISPLAY[key]?.name.toLowerCase();
+      return Object.entries(usersMap).find(([, u]) => u.name.toLowerCase() === displayName)?.[0];
+    }).filter(Boolean);
+
+    if (personIds.length) {
+      await sb.from('event_attendees').insert(
+        personIds.map(uid => ({ event_id: saved.id, user_id: uid }))
+      );
+    }
+
+    saved.event_attendees = personIds.map(uid => ({ user_id: uid }));
+    allEvents.push(saved);
+    allEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+    msg('EVENT ADDED ✓', 'ok');
+    resetForm();
+    ['all','adults','kids'].forEach(renderCalendar);
+    renderEventsList();
+
+    btn.disabled = false;
+    btn.textContent = '+ ADD EVENT';
+    setTimeout(() => { document.getElementById('formMsg').textContent = ''; }, 3000);
+  }
+
+  function msg(text, type) {
+    const el = document.getElementById('formMsg');
+    el.textContent = text;
+    el.className = 'form-msg ' + type;
+  }
+
+  function resetForm() {
+    selType = null;
+    selPersons.clear();
+    selDows.clear();
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.person-chip').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.dow-pill').forEach(p => p.classList.remove('selected'));
+    document.getElementById('fTitle').value = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('fAllDay').checked = true;
+    document.getElementById('fRecurrence').value = 'none';
+    document.getElementById('timeFields').classList.add('hidden');
+    document.getElementById('recEndRow').classList.add('hidden');
+    document.getElementById('dowRow').classList.add('hidden');
+    document.getElementById('fDate').value = today();
+  }
+
+  // ── Events list (Manage tab) ──────────────────────────────────
+  function renderEventsList() {
+    const container = document.getElementById('eventsList');
+    const now = today();
+    const upcoming = allEvents
+      .filter(ev => ev.date >= now
+        || (ev.recurrence_type && ev.recurrence_type !== 'none'
+            && (!ev.recurrence_end || ev.recurrence_end >= now)))
+      .slice(0, 40);
+
+    if (!upcoming.length) {
+      container.innerHTML = '<div class="empty-state">NO UPCOMING EVENTS</div>';
+      return;
+    }
+
+    container.innerHTML = upcoming.map(ev => {
+      const ti    = EVENT_TYPES.find(t => t.key === ev.event_type) || { icon: '📌', label: ev.event_type };
+      const color = pillColor(ev.event_attendees.map(a => a.user_id));
+      const rec   = ev.recurrence_type && ev.recurrence_type !== 'none'
+        ? ' · ↺ ' + ev.recurrence_type.toUpperCase() : '';
+      const names = ev.event_attendees
+        .map(a => usersMap[a.user_id]?.name?.toUpperCase() || '?')
+        .join(', ');
+      return `<div class="event-item">
+        <div class="event-dot" style="background:${color}"></div>
+        <div class="event-info">
+          <div class="event-item-title">${esc(ev.title)}</div>
+          <div class="event-item-meta">${fmtDate(ev.date)}${rec}${names ? ' · ' + names : ''}</div>
+        </div>
+        <div class="type-tag">${ti.icon} ${ti.label.toUpperCase()}</div>
+        <button class="event-del-btn" onclick="deleteEvent('${ev.id}')" title="Delete">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  async function deleteEvent(id) {
+    await sb.from('events').delete().eq('id', id);
+    allEvents = allEvents.filter(e => e.id !== id);
+    ['all','adults','kids'].forEach(renderCalendar);
+    renderEventsList();
+  }
+
+  // ── Start ──────────────────────────────────────────────────────
+  boot();
+</script>
 </body>
 </html>

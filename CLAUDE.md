@@ -2,6 +2,10 @@
 
 ## Git — absolute rule
 
-**Never commit or push without an explicit instruction from Kay in that turn.**
+**NEVER commit or push without Kay explicitly saying so in that exact turn.**
 
-Completing a task, fixing a bug, or finishing a feature does not grant permission to commit. Wait for Kay to say "commit", "push", or "sync" before touching git. Permission granted in a previous turn does not carry forward.
+- Finishing a task does NOT grant permission to commit.
+- Fixing a bug does NOT grant permission to commit.
+- A previous "commit and push" does NOT carry forward to the next task.
+- Do NOT end a turn with a commit or push unless Kay said the words "commit", "push", or "sync" in that same message.
+- When in doubt: stop, report what's done, and wait.
