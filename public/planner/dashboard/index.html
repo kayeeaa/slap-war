@@ -97,40 +97,35 @@
     .panel { display: none; padding: 24px; }
     .panel.active { display: block; }
 
-    /* ── Calendar ── */
-    .cal-header {
+    /* ── Week view ── */
+    .wv-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 18px;
+      margin-bottom: 22px;
       gap: 12px;
-      flex-wrap: wrap;
     }
-    .cal-month {
+    .wv-week-label {
       font-family: 'Rajdhani', sans-serif;
       font-weight: 700;
-      font-size: 22px;
-      letter-spacing: 0.1em;
-      color: #e8eef8;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      color: #2a3a52;
     }
-    .cal-nav { display: flex; align-items: center; gap: 8px; }
-    .cal-nav-btn {
+    .wv-nav { display: flex; align-items: center; gap: 8px; }
+    .wv-nav-btn {
       background: #090b12;
       border: 1px solid rgba(0,220,255,0.2);
       border-radius: 6px;
       color: #00dcff;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      font-size: 16px;
-      line-height: 1;
+      font-size: 16px; line-height: 1;
       transition: background 0.15s, border-color 0.15s;
     }
-    .cal-nav-btn:hover { background: rgba(0,220,255,0.1); border-color: #00dcff; }
-    .today-btn {
+    .wv-nav-btn:hover { background: rgba(0,220,255,0.1); border-color: #00dcff; }
+    .wv-today-btn {
       background: #090b12;
       border: 1px solid rgba(0,220,255,0.2);
       border-radius: 6px;
@@ -142,80 +137,128 @@
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
     }
-    .today-btn:hover { background: rgba(0,220,255,0.1); border-color: #00dcff; }
+    .wv-today-btn:hover { background: rgba(0,220,255,0.1); border-color: #00dcff; }
 
-    .cal-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 1px;
-      background: rgba(0,220,255,0.07);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .cal-dow {
+    /* Today card */
+    .today-card {
       background: #090b12;
-      text-align: center;
-      padding: 8px 2px;
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      color: #2a3a52;
+      border: 1px solid rgba(0,220,255,0.18);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 10px;
+      position: relative;
     }
-    .cal-day {
-      background: #0c0e15;
-      min-height: 82px;
-      padding: 5px 4px;
-      cursor: default;
+    .today-card::before {
+      content: 'TODAY';
+      position: absolute;
+      top: 14px; right: 16px;
+      font-size: 8px;
+      letter-spacing: 0.25em;
+      color: #00dcff;
+      opacity: 0.5;
     }
-    .cal-day.other-month { background: #0a0b12; opacity: 0.45; }
-    .cal-day.today { background: #0e1122; }
-
-    .day-num {
-      font-size: 10px;
-      color: #2a3a52;
-      display: block;
-      margin-bottom: 3px;
+    .today-dow {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 32px;
+      letter-spacing: 0.08em;
+      color: #e8eef8;
       line-height: 1;
+      margin-bottom: 2px;
     }
-    .day-num-today {
-      background: #00dcff;
-      color: #0c0e15;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
+    .today-date {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #2a3a52;
+      margin-bottom: 16px;
+    }
+    .today-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .today-pill {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      font-size: 9px;
+      gap: 5px;
+      font-size: 11px;
       font-weight: 700;
-      margin-bottom: 3px;
-    }
-
-    /* ── Event pills ── */
-    .event-pill {
-      display: block;
-      font-size: 8px;
-      padding: 2px 4px;
-      border-radius: 3px;
-      margin-bottom: 2px;
-      cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      letter-spacing: 0.04em;
+      padding: 5px 10px;
+      border-radius: 6px;
       color: #08090f;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      transition: opacity 0.1s, transform 0.08s;
+      cursor: pointer;
+      transition: opacity 0.12s, transform 0.08s;
       user-select: none;
     }
-    .event-pill:hover { opacity: 0.82; transform: scale(1.03); }
-    .more-pill {
-      font-size: 7px;
-      color: #2a3a52;
-      letter-spacing: 0.1em;
-      cursor: pointer;
-      padding: 1px 2px;
+    .today-pill:hover { opacity: 0.82; transform: scale(1.03); }
+    .today-no-events {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: #1e2d40;
     }
-    .more-pill:hover { color: #00dcff; }
+
+    /* Remaining days */
+    .week-rows { display: flex; flex-direction: column; gap: 3px; }
+    .week-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      background: #090b12;
+      border: 1px solid rgba(255,255,255,0.03);
+      min-height: 42px;
+    }
+    .week-row-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+      width: 34px;
+    }
+    .week-row-dow {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: #3a5470;
+      line-height: 1;
+    }
+    .week-row-day {
+      font-size: 16px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      color: #2a3a52;
+      line-height: 1.1;
+    }
+    .week-row-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      flex: 1;
+    }
+    .week-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 3px 7px;
+      border-radius: 4px;
+      color: #08090f;
+      cursor: pointer;
+      transition: opacity 0.1s, transform 0.08s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .week-pill:hover { opacity: 0.82; transform: scale(1.03); }
+    .week-row-empty {
+      font-size: 8px;
+      letter-spacing: 0.12em;
+      color: #1a2738;
+    }
 
     /* ── Popover ── */
     .overlay {
@@ -534,18 +577,17 @@
     /* ── Desktop ── */
     @media (min-width: 768px) {
       body { padding: 28px 32px; }
-
       .tab { padding: 13px 26px; font-size: 11px; }
-
       .panel { padding: 32px; }
 
-      .cal-month { font-size: 28px; }
-      .cal-dow { padding: 10px 4px; font-size: 10px; letter-spacing: 0.15em; }
-      .cal-day { min-height: 110px; padding: 7px 6px; }
-      .day-num { font-size: 12px; }
-      .day-num-today { width: 22px; height: 22px; font-size: 11px; }
-      .event-pill { font-size: 10px; padding: 3px 6px; margin-bottom: 3px; }
-      .more-pill  { font-size: 9px; }
+      .today-dow { font-size: 42px; }
+      .today-date { font-size: 11px; margin-bottom: 18px; }
+      .today-pill { font-size: 13px; padding: 6px 13px; }
+      .week-row { padding: 11px 18px; min-height: 48px; }
+      .week-row-dow { font-size: 12px; }
+      .week-row-day { font-size: 20px; }
+      .week-row-label { width: 40px; }
+      .week-pill { font-size: 10px; padding: 4px 9px; }
 
       .section-heading { font-size: 15px; }
       .form-label { font-size: 10px; }
@@ -561,7 +603,6 @@
       .event-item-meta  { font-size: 9px; }
       .type-tag { font-size: 8px; }
 
-      /* Two-column manage layout */
       .manage-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -573,7 +614,6 @@
 
     @media (min-width: 1200px) {
       body { padding: 32px 48px; }
-      .cal-day { min-height: 130px; }
       .type-grid { grid-template-columns: repeat(10, 1fr); }
     }
 
@@ -584,7 +624,6 @@
       .window { border-radius: 0; }
       .panel { padding: 14px; }
       .type-grid { gap: 4px; }
-      .cal-day { min-height: 62px; }
       .tab { padding: 10px 14px; font-size: 9px; }
     }
   </style>
@@ -605,24 +644,19 @@
   </div>
 
   <div class="tabs" role="tablist">
-    <button class="tab active" data-tab="all">ALL</button>
-    <button class="tab" data-tab="adults">KAY &amp; DANNY</button>
-    <button class="tab" data-tab="kids">KIDS</button>
+    <button class="tab active" data-tab="me">ME</button>
+    <button class="tab" data-tab="everyone">EVERYONE</button>
     <button class="tab" data-tab="chores">CHORES</button>
     <button class="tab" data-tab="manage">MANAGE</button>
   </div>
 
-  <div class="panel active" id="panel-all">
-    <div class="empty-state" id="cal-all-loading">LOADING EVENTS...</div>
-    <div id="cal-all"></div>
+  <div class="panel active" id="panel-me">
+    <div class="empty-state" id="wv-loading">LOADING EVENTS...</div>
+    <div id="wv-me"></div>
   </div>
 
-  <div class="panel" id="panel-adults">
-    <div id="cal-adults"></div>
-  </div>
-
-  <div class="panel" id="panel-kids">
-    <div id="cal-kids"></div>
+  <div class="panel" id="panel-everyone">
+    <div id="wv-everyone"></div>
   </div>
 
   <div class="panel" id="panel-chores">
@@ -764,16 +798,15 @@
                        'July','August','September','October','November','December'];
 
   // ── State ─────────────────────────────────────────────────────
-  let usersMap  = {};   // uuid → { id, name, color, role }
-  let allEvents = [];   // raw DB rows with event_attendees embedded
-  let viewYear  = new Date().getFullYear();
-  let viewMonth = new Date().getMonth();
+  let usersMap    = {};   // uuid → { id, name, color, role }
+  let allEvents   = [];   // raw DB rows with event_attendees embedded
+  let viewMonday  = weekMonday(new Date()); // Date — Mon of displayed week
   let openEventId = null;
 
   // Form
   let selType    = null;
-  let selPersons = new Set();   // family keys e.g. 'kay'
-  let selDows    = new Set();   // 'Mon','Tue'...
+  let selPersons = new Set();
+  let selDows    = new Set();
 
   // ── Boot ──────────────────────────────────────────────────────
   async function boot() {
@@ -805,10 +838,15 @@
   }
 
   function ymd(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function weekMonday(d) {
+    const copy = new Date(d);
+    const dow  = (copy.getDay() + 6) % 7; // Mon=0
+    copy.setDate(copy.getDate() - dow);
+    copy.setHours(0,0,0,0);
+    return copy;
   }
 
   // ── Load ──────────────────────────────────────────────────────
@@ -819,8 +857,9 @@
       .order('date', { ascending: true });
 
     if (!error && data) allEvents = data;
-    document.getElementById('cal-all-loading').style.display = 'none';
-    renderCalendar('all');
+    const loading = document.getElementById('wv-loading');
+    if (loading) loading.style.display = 'none';
+    renderWeekView('me');
     renderEventsList();
   }
 
@@ -833,38 +872,39 @@
         btn.classList.add('active');
         const tab = btn.dataset.tab;
         document.getElementById('panel-' + tab).classList.add('active');
-        if (tab === 'all' || tab === 'adults' || tab === 'kids') renderCalendar(tab);
+        if (tab === 'me' || tab === 'everyone') renderWeekView(tab);
       });
     });
   }
 
-  // ── Calendar ──────────────────────────────────────────────────
+  // ── Week view ─────────────────────────────────────────────────
   function filterForTab(tab) {
-    if (tab === 'all') return allEvents;
-    const kidIds   = Object.entries(usersMap).filter(([,u]) => u.role === 'child').map(([id]) => id);
-    const adultIds = Object.entries(usersMap).filter(([,u]) => u.role !== 'child').map(([id]) => id);
-    const ids = tab === 'kids' ? kidIds : adultIds;
-    return allEvents.filter(ev => ev.event_attendees.some(a => ids.includes(a.user_id)));
+    if (tab === 'everyone') return allEvents;
+    // 'me' — filter to the logged-in user's events
+    return allEvents.filter(ev =>
+      ev.event_attendees.some(a => a.user_id === ME.id)
+    );
   }
 
-  function expandToMonth(events, year, month) {
-    const mStart = new Date(year, month, 1);
-    const mEnd   = new Date(year, month + 1, 0);
-    const out    = [];
+  function expandToWeek(events, monday) {
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23,59,59,999);
+    const out = [];
 
     events.forEach(ev => {
       const evStart = new Date(ev.date + 'T00:00:00');
-      const recEnd  = ev.recurrence_end ? new Date(ev.recurrence_end + 'T00:00:00') : null;
+      const recEnd  = ev.recurrence_end ? new Date(ev.recurrence_end + 'T23:59:59') : null;
 
       if (!ev.recurrence_type || ev.recurrence_type === 'none') {
-        if (evStart >= mStart && evStart <= mEnd) {
+        if (evStart >= monday && evStart <= sunday) {
           out.push({ ...ev, _occ: ev.date });
         }
         return;
       }
 
-      const scanEnd = recEnd ? new Date(Math.min(mEnd, recEnd)) : mEnd;
-      const d = new Date(Math.max(evStart, mStart));
+      const scanEnd = recEnd ? new Date(Math.min(sunday, recEnd)) : sunday;
+      const d = new Date(Math.max(evStart.getTime(), monday.getTime()));
       while (d <= scanEnd) {
         if (occursOn(ev, d, evStart)) out.push({ ...ev, _occ: ymd(d) });
         d.setDate(d.getDate() + 1);
@@ -875,122 +915,132 @@
   }
 
   function occursOn(ev, d, origin) {
-    const dow = DOW_SHORT[(d.getDay() + 6) % 7]; // Mon=0
+    const dow = DOW_SHORT[(d.getDay() + 6) % 7];
     switch (ev.recurrence_type) {
-      case 'daily':
-        return true;
+      case 'daily': return true;
       case 'weekly':
-        return !ev.recurrence_days || ev.recurrence_days.length === 0
+        return !ev.recurrence_days?.length
           ? d.getDay() === origin.getDay()
           : ev.recurrence_days.includes(dow);
       case 'biweekly': {
-        const weeksDiff = Math.floor((d - origin) / 604800000);
-        const dayOk = !ev.recurrence_days || ev.recurrence_days.length === 0
+        const wkDiff = Math.floor((d - origin) / 604800000);
+        const dayOk  = !ev.recurrence_days?.length
           ? d.getDay() === origin.getDay()
           : ev.recurrence_days.includes(dow);
-        return dayOk && weeksDiff % 2 === 0;
+        return dayOk && wkDiff % 2 === 0;
       }
-      case 'monthly':
-        return d.getDate() === origin.getDate();
-      default:
-        return false;
+      case 'monthly': return d.getDate() === origin.getDate();
+      default:        return false;
     }
   }
 
-  function renderCalendar(tab) {
-    const el = document.getElementById('cal-' + tab);
+  function renderWeekView(tab) {
+    const el = document.getElementById('wv-' + tab);
     if (!el) return;
 
     const events   = filterForTab(tab);
-    const expanded = expandToMonth(events, viewYear, viewMonth);
+    const expanded = expandToWeek(events, viewMonday);
 
     const byDate = {};
     expanded.forEach(ev => {
       (byDate[ev._occ] = byDate[ev._occ] || []).push(ev);
     });
 
-    const monthLabel  = MONTH_NAMES[viewMonth].toUpperCase() + ' ' + viewYear;
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    const prevDays    = new Date(viewYear, viewMonth, 0).getDate();
-    let   startDow    = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // Mon=0
-    const todayStr    = today();
+    const todayStr  = today();
+    const weekEnd   = new Date(viewMonday); weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekLabel = fmtDate(ymd(viewMonday)).replace(/\d{4}$/,'').trim()
+                    + ' – ' + fmtDate(ymd(weekEnd));
+
+    // Build 7 day dates for this week
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(viewMonday);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+
+    const todayDate   = days.find(d => ymd(d) === todayStr) || days[0];
+    const todayYmd    = ymd(todayDate);
+    const todayEvs    = byDate[todayYmd] || [];
+    const remainDays  = days.filter(d => ymd(d) !== todayYmd);
+
+    const DOW_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
     let html = `
-      <div class="cal-header">
-        <div class="cal-month">${monthLabel}</div>
-        <div class="cal-nav">
-          <button class="today-btn" onclick="goToday()">TODAY</button>
-          <button class="cal-nav-btn" onclick="shiftMonth(-1)">&#8249;</button>
-          <button class="cal-nav-btn" onclick="shiftMonth(1)">&#8250;</button>
+      <div class="wv-header">
+        <div class="wv-week-label">${weekLabel}</div>
+        <div class="wv-nav">
+          <button class="wv-today-btn" onclick="goThisWeek()">THIS WEEK</button>
+          <button class="wv-nav-btn" onclick="shiftWeek(-1)">&#8249;</button>
+          <button class="wv-nav-btn" onclick="shiftWeek(1)">&#8250;</button>
         </div>
       </div>
-      <div class="cal-grid">
+
+      <div class="today-card">
+        <div class="today-dow">${DOW_FULL[(todayDate.getDay()+6)%7].toUpperCase()}</div>
+        <div class="today-date">${fmtDate(todayYmd)}</div>
+        <div class="today-pills">
+          ${todayEvs.length
+            ? todayEvs.map(ev => todayPillHtml(ev)).join('')
+            : '<span class="today-no-events">NO EVENTS TODAY</span>'}
+        </div>
+      </div>
+
+      <div class="week-rows">
+        ${remainDays.map(d => {
+          const dStr = ymd(d);
+          const evs  = byDate[dStr] || [];
+          const dow  = DOW_SHORT[(d.getDay()+6)%7].toUpperCase();
+          return `<div class="week-row">
+            <div class="week-row-label">
+              <span class="week-row-dow">${dow}</span>
+              <span class="week-row-day">${d.getDate()}</span>
+            </div>
+            <div class="week-row-pills">
+              ${evs.length
+                ? evs.map(ev => weekPillHtml(ev, dStr)).join('')
+                : '<span class="week-row-empty">—</span>'}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
     `;
 
-    DOW_SHORT.forEach(d => { html += `<div class="cal-dow">${d}</div>`; });
-
-    // Leading filler
-    for (let i = 0; i < startDow; i++) {
-      const d = prevDays - startDow + i + 1;
-      html += `<div class="cal-day other-month"><span class="day-num">${d}</span></div>`;
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr  = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isToday  = dateStr === todayStr;
-      const dayEvs   = byDate[dateStr] || [];
-      const visible  = dayEvs.slice(0, 3);
-      const overflow = dayEvs.length - 3;
-
-      html += `<div class="cal-day${isToday ? ' today' : ''}">`;
-      html += isToday
-        ? `<span class="day-num-today">${d}</span>`
-        : `<span class="day-num">${d}</span>`;
-
-      visible.forEach(ev => { html += pillHtml(ev); });
-      if (overflow > 0) html += `<div class="more-pill">+${overflow}</div>`;
-      html += '</div>';
-    }
-
-    // Trailing filler
-    const total    = startDow + daysInMonth;
-    const trailing = total % 7 === 0 ? 0 : 7 - (total % 7);
-    for (let i = 1; i <= trailing; i++) {
-      html += `<div class="cal-day other-month"><span class="day-num">${i}</span></div>`;
-    }
-
-    html += '</div>';
     el.innerHTML = html;
   }
 
-  function pillHtml(ev) {
-    const color    = pillColor(ev.event_attendees.map(a => a.user_id));
-    const typeInfo = EVENT_TYPES.find(t => t.key === ev.event_type) || { icon: '📌' };
-    const safe     = esc(ev.title);
-    return `<div class="event-pill" style="background:${color}"
-      onclick="openPopover(event,this,'${ev.id}','${ev._occ}')"
-      title="${safe}">${typeInfo.icon} ${safe}</div>`;
+  function todayPillHtml(ev) {
+    const color  = pillColor(ev.event_attendees.map(a => a.user_id));
+    const ti     = EVENT_TYPES.find(t => t.key === ev.event_type) || { icon: '📌' };
+    return `<span class="today-pill" style="background:${color}"
+      onclick="openPopover(event,this,'${ev.id}','${ev._occ || ev.date}')"
+      >${ti.icon} ${esc(ev.title)}</span>`;
+  }
+
+  function weekPillHtml(ev, occDate) {
+    const color = pillColor(ev.event_attendees.map(a => a.user_id));
+    const ti    = EVENT_TYPES.find(t => t.key === ev.event_type) || { icon: '📌' };
+    return `<span class="week-pill" style="background:${color}"
+      onclick="openPopover(event,this,'${ev.id}','${occDate}')"
+      >${ti.icon} ${esc(ev.title)}</span>`;
   }
 
   function pillColor(ids) {
-    if (!ids || !ids.length) return '#00dcff';
+    if (!ids?.length) return '#00dcff';
     for (const id of ids) {
       if (usersMap[id]?.color) return usersMap[id].color;
     }
     return '#00dcff';
   }
 
-  function shiftMonth(delta) {
-    viewMonth += delta;
-    if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
-    if (viewMonth > 11) { viewMonth = 0;  viewYear++; }
-    ['all','adults','kids'].forEach(renderCalendar);
+  function shiftWeek(delta) {
+    viewMonday = new Date(viewMonday);
+    viewMonday.setDate(viewMonday.getDate() + delta * 7);
+    ['me','everyone'].forEach(renderWeekView);
   }
 
-  function goToday() {
-    viewYear  = new Date().getFullYear();
-    viewMonth = new Date().getMonth();
-    ['all','adults','kids'].forEach(renderCalendar);
+  function goThisWeek() {
+    viewMonday = weekMonday(new Date());
+    ['me','everyone'].forEach(renderWeekView);
   }
 
   // ── Popover ───────────────────────────────────────────────────
