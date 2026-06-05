@@ -805,7 +805,7 @@
           <div class="players" id="profilePills"></div>
           <button class="fam-btn on" id="famBtn">&#9783; Everyone</button>
           <div class="week-nav">
-            <button class="wk-this-btn" onclick="goThisWeek()">This Week</button>
+            <button class="wk-this-btn" id="wkThisBtn" onclick="goThisWeek()">This Week</button>
             <button class="wk-btn" onclick="shiftWeek(-1)">&#8249;</button>
             <button class="wk-btn" onclick="shiftWeek(1)">&#8250;</button>
           </div>
@@ -1178,10 +1178,17 @@
 
   // ── Week label ────────────────────────────────────────────────
   function renderWeekLabel() {
-    const sun = new Date(viewMonday); sun.setDate(sun.getDate() + 6);
+    const sun  = new Date(viewMonday); sun.setDate(sun.getDate() + 6);
     document.getElementById('weekLabel').textContent =
       `${viewMonday.getDate()} ${MONTH_ABBR[viewMonday.getMonth()]} — ` +
       `${sun.getDate()} ${MONTH_ABBR[sun.getMonth()]} ${sun.getFullYear()}`;
+    const diff = Math.round((viewMonday - weekMonday(new Date())) / 604800000);
+    const btn  = document.getElementById('wkThisBtn');
+    if (diff === 0)      btn.textContent = 'This Week';
+    else if (diff === 1) btn.textContent = 'Next Week';
+    else btn.textContent =
+      `${viewMonday.getDate()} ${MONTH_ABBR[viewMonday.getMonth()]} — ` +
+      `${sun.getDate()} ${MONTH_ABBR[sun.getMonth()]}`;
   }
 
   // ── Filter events ─────────────────────────────────────────────
