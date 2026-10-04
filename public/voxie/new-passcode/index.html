@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New password · Voxie</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+  <link rel="stylesheet" href="/voxie/styles.css" />
+</head>
+<body>
+  <!-- Grown-ups land here from the "reset your password" email. Children don't: their grown-up sets a new passcode for them. -->
+  <div class="wrap">
+    <section class="screen">
+      <p class="logo-text-lockup"><span class="text-logo">Voxie</span><span class="logo-byline">by House of Kay</span></p>
+      <form class="block login-pop-form" id="newPasscodeForm" novalidate hidden>
+        <h1>Make a new password</h1>
+        <div class="field">
+          <label class="label" for="newPasscode">New password</label>
+          <input type="password" id="newPasscode" autocomplete="new-password">
+          <span class="hint" id="newPasscodeRule"></span>
+        </div>
+        <div class="field">
+          <label class="label" for="newPasscodeAgain">Type it again</label>
+          <input type="password" id="newPasscodeAgain" autocomplete="new-password">
+        </div>
+        <p class="error" id="newPasscodeError" role="alert"></p>
+        <button class="btn" type="submit" id="newPasscodeButton">Save my new password</button>
+      </form>
+      <div class="block" id="newPasscodeMessage" role="status">
+        <p id="newPasscodeMessageText">Checking your link…</p>
+        <a class="btn" id="newPasscodeHome" href="/voxie/" hidden>Go to Voxie</a>
+      </div>
+    </section>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/voxie/data/supabase-config.js"></script>
+  <script src="/voxie/new-passcode/new-passcode.js"></script>
+</body>
+</html>

@@ -138,10 +138,6 @@ select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .loading{min-height:60vh;display:grid;place-items:center;text-align:center}
 @keyframes hop{50%{transform:translateY(-8px)}}
 
-/* login */
-.demo{background:var(--sunk);border:2px dashed var(--dirt);padding:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
-.demo-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.demo-row span{min-width:0;overflow-wrap:anywhere}
 
 /* setup steps */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
@@ -513,11 +509,6 @@ body:has(.toast:not([hidden])) .sheet-backdrop{padding-top:calc(150px + env(safe
 .toast-close{flex:none;width:44px;height:44px;font:inherit;font-size:18px;background:none;color:var(--ink);border:0;cursor:pointer}
 .toast p{flex:1;min-width:0}
 
-/* prototype-only controls (delete in Claude Code) */
-.proto{border:2px dashed var(--dirt);background:var(--sunk)}
-.proto summary{font-family:var(--f-display);padding:10px 14px;cursor:pointer;font-size:15px}
-.proto .inner{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px;font-size:15px}
-.proto label{display:flex;gap:8px;align-items:center}
 
 @media (prefers-reduced-motion:reduce){.login-buddies canvas{animation:none}.sheet,.sheet-backdrop{animation:none}.timer-fill,.subtab-slider,.switch::after{transition:none}.levelup,.stage-pet,.pet-message,.pet-message-arrow{animation:none}.btn:active{transform:none}body{transition:none}}
 /* ---------- Parent account ---------- */

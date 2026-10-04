@@ -111,10 +111,9 @@ Copy any file, give it a new id (lowercase-with-dashes), change the art and numb
 
 The prototype is one file with clearly labelled sections. Its comments carry the detail; this is the checklist.
 
-- **`data/dataLayer.js` is fake.** It is the only part to replace with Supabase. Keep every function name, its arguments and the shape of what it returns. The comment at the top of that section lists:
-  - the tables
-  - the rules that must run on the server: chance rolls, powers, Shop prices, daily limits, parent ↔ child links and child-only functions
-  - the "New passcode" page that the passcode reset email needs
+- ✅ **`data/dataLayer.js` now talks to Supabase** (done). The backend is in `supabase/migrations/` and `supabase/functions/`; [BACKEND.md](BACKEND.md) maps every dataLayer function to its table, RPC or Edge Function. The browser's project URL and public key are in `public/voxie/data/supabase-config.js` (gitignored; copy `supabase-config.example.js` to make it). The "New password" page for reset emails is `/voxie/new-passcode`.
+  - **When items, missions or powers change**, refresh the server's copy of the numbers (prices, powers, mission answers and ages) with `node scripts/voxie-sync-catalogue.js`, with `SUPABASE_SERVICE_ROLE_KEY` set. Never put that key in the browser.
+  - **Database changes** go in a new file in `supabase/migrations/`, applied with `npx supabase db push`. Edge Functions deploy with `npx supabase functions deploy <name>`.
 - **Accounts are grown-up first.** Only grown-ups sign up (email and password). They add each child with a username, passcode and birth month and year, so every child account has a grown-up's agreement from the start.
   - **No child's real name, email, full date of birth or gender is ever collected.** The only things held about a child are their username and birth month and year. The grown-up is told not to use the child's real name as the username. At first setup the child makes up a game name (`display_name`, told not to use their real name); until then they're shown by their username.
   - **Why the birth month and year are collected:** only to work out the child's age each day, so they get missions that suit their age. Gender isn't collected: every mission is for every child of the right age. The grown-up can change the birth month and year on the child's tab; the child can't. Record this purpose wherever personal data is documented (privacy notice, data protection records) when the app moves to Supabase.
@@ -123,10 +122,8 @@ The prototype is one file with clearly labelled sections. Its comments carry the
   - A second grown-up joins with an invite code from the first one.
   - A child's only grown-up can't unlink; they can delete the child's account instead, which removes all of its data.
   - Payments later go on the grown-up's profile (one plan covers the family): a child gets paid features if any of their grown-ups pays.
-- **Remove everything marked "Prototype only":**
-  - the test accounts on the homepage
-  - the "Prototype controls" panel
-  - `prototypeSettings`
+- ✅ **Prototype-only bits removed** (done): the homepage test accounts, the "Prototype controls" panel and `prototypeSettings`.
+- **Still to do before launch:** a word filter for game names and pet names (other children see them), and decide whether grown-ups should approve friend requests (see BACKEND.md, point 9).
 - **Install the app:** a real install needs a web app manifest, icons and a service worker (see the comment in the install section).
 - **Sign-up switch:** `SIGN_UP_OPEN` turns sign-up on or off ("Coming soon"); anyone with an account can still log in.
 - **Missions:** 468 missions are in `content/missions/`, picked by the child's age. See [MISSIONS-README.md](MISSIONS-README.md) for how they work and [MISSIONS-LIST.md](MISSIONS-LIST.md) for the full list.

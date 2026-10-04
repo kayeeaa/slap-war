@@ -322,12 +322,6 @@ element("loginForm").onsubmit = async event => {
   }
   element("loginButton").disabled = false;
 };
-document.querySelectorAll("[data-demo]").forEach(button => button.onclick = () => {
-  const user = fakeDatabase.users[Number(button.dataset.demo) - 1];
-  openLoginSheet();
-  element("loginEmail").value = user.email || user.username;
-  element("loginPasscode").value = user.passcode;
-});
 
 /* ---------- first-time setup (3 steps) ---------- */
 function setupPreviewLook() { return { ...setupDraft, location: "home", level: 1, equipped: [] }; }
@@ -2122,6 +2116,7 @@ function openParentSignUp() {
   element("parentSignUpForm").hidden = false;
   element("parentSignUpPasswordRule").textContent = `At least ${MIN_PASSCODE_LENGTH} characters.`;
   element("parentSignUpError").textContent = "";
+  element("parentSignUpCheckEmail").hidden = true;
   setTimeout(() => {
     element("parentSignUpForm").scrollIntoView({ block: "start", behavior: "smooth" });
     element("parentSignUpName").focus({ preventScroll: true });
@@ -2149,6 +2144,14 @@ element("parentSignUpForm").onsubmit = async event => {
   try {
     const profile = await dataLayer.signUpParent({ displayName, email, password });
     ["parentSignUpName", "parentSignUpEmail", "parentSignUpPassword", "parentSignUpPasswordAgain"].forEach(id => element(id).value = "");
+    // Email confirmation is on: they finish signing up from the link we emailed, which brings them back here logged in.
+    if (profile.needsEmailConfirmation) {
+      say("");
+      element("parentSignUpCheckEmail").textContent = `Nearly there! We've emailed a link to ${email.trim()}. Open it to finish making your account, then you can add your kids.`;
+      element("parentSignUpCheckEmail").hidden = false;
+      element("parentSignUpButton").disabled = false;
+      return;
+    }
     element("parentSignUpForm").hidden = true;
     await routeAfterSignIn(profile);
   } catch (error) {
@@ -2488,6 +2491,7 @@ async function removeOpenChild(deleteAccount) {
   } catch (error) {
     if (handledNoLongerLinked(error, childId)) return;
     if (error.message === "last-grown-up") { element("parentUnlinkError").textContent = "The other grown-up has gone, so you're the only one now."; await openParentTab(childId); return; }
+    if (error.message === "not-only-grown-up") { element("parentUnlinkError").textContent = "Another grown-up has joined, so you can remove them from your account instead."; await openParentTab(childId); return; }
     element("parentUnlinkError").textContent = deleteAccount ? "Couldn't delete it. Check your internet and try again." : "Couldn't remove it. Check your internet and try again.";
     renderParentGrownUps();
   }
@@ -2568,46 +2572,6 @@ element("parentLinkForm").onsubmit = async event => {
 element("parentLogOutButton").onclick = async () => {
   try { await dataLayer.signOut(); } catch (error) {}
   resetSessionState();
-  openLogin();
-};
-
-/* ---------- PROTOTYPE CONTROLS (delete in Claude Code) ---------- */
-element("protoFailSaves").onchange = event => prototypeSettings.failSaves = event.target.checked;
-element("protoNoChores").onchange = async event => {
-  prototypeSettings.hideChores = event.target.checked;
-  if (!element("screenGame").hidden) await openGame();
-};
-element("protoAddXp").onclick = async () => {
-  if (!fakeDatabase.signedInUserId) return;
-  const childId = fakeDatabase.signedInUserId;
-  const buddyId = fakeDatabase.profiles[childId].active_buddy_id;
-  fakeDatabase.prototypeBonusLevelPoints[buddyId] = (fakeDatabase.prototypeBonusLevelPoints[buddyId] || 0) + 5;
-  persistFakeDatabase();
-  if (currentProfile && currentProfile.setup_complete) await openGame();
-};
-element("protoAddMissionXp").onclick = async () => {
-  if (!fakeDatabase.signedInUserId) return;
-  const childId = fakeDatabase.signedInUserId;
-  fakeDatabase.prototypeBonusXp = fakeDatabase.prototypeBonusXp || {};
-  fakeDatabase.prototypeBonusXp[childId] = (fakeDatabase.prototypeBonusXp[childId] || 0) + 20;
-  persistFakeDatabase();
-  if (currentProfile && currentProfile.setup_complete) await openGame();
-};
-element("protoJumpTo100").onclick = async () => {
-  if (!fakeDatabase.signedInUserId) return;
-  const childId = fakeDatabase.signedInUserId, buddyId = fakeDatabase.profiles[childId].active_buddy_id;
-  const needed = pointsNeededForLevel(REBIRTH_EVERY_LEVELS) - (fakeBuddyLevelPoints(childId)[buddyId] || 0);
-  if (needed > 0) fakeDatabase.prototypeBonusLevelPoints[buddyId] = (fakeDatabase.prototypeBonusLevelPoints[buddyId] || 0) + needed;
-  persistFakeDatabase();
-  if (currentProfile && currentProfile.setup_complete) await openGame();
-};
-element("protoReset").onclick = () => {
-  fakeDatabase = buildFakeDatabase();
-  persistFakeDatabase();
-  prototypeSettings.failSaves = prototypeSettings.hideChores = false;
-  element("protoFailSaves").checked = element("protoNoChores").checked = false;
-  hideSaveError();
-  currentProfile = null;
   openLogin();
 };
 

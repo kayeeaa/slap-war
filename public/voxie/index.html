@@ -88,6 +88,7 @@
           </div>
           <p class="hint" id="parentSignUpPasswordRule"></p>
           <p class="error" id="parentSignUpError" role="alert"></p>
+          <p class="hint" id="parentSignUpCheckEmail" role="status" hidden></p>
           <div class="btnrow">
             <button class="btn" type="submit" id="parentSignUpButton">Make my account</button>
             <button class="btn ghost" type="button" id="parentSignUpCancel">Back</button>
@@ -97,17 +98,6 @@
       </section>
 
       <footer class="site-footer"><span class="text-logo small">Voxie</span><span>Made by House of Kay</span></footer>
-
-      <div class="demo">
-        <strong>Prototype only: test accounts</strong>
-        <div class="demo-row"><span>newplayer: added by Sam, not set up yet (sees setup)<br>newplayer · blocks1</span><button class="btn small ghost" type="button" data-demo="1">Use</button></div>
-        <div class="demo-row"><span>Sky: lots of XP, 1 task from level 6, friend request waiting<br>sky · blocks2</span><button class="btn small ghost" type="button" data-demo="2">Use</button></div>
-        <div class="demo-row"><span>Jamie: friend request waiting<br>jamie · blocks4</span><button class="btn small ghost" type="button" data-demo="4">Use</button></div>
-        <div class="demo-row"><span>Max: friend request waiting<br>max · blocks5</span><button class="btn small ghost" type="button" data-demo="5">Use</button></div>
-        <div class="demo-row"><span>Robin: an angel buddy, friend request waiting<br>robin · blocks3</span><button class="btn small ghost" type="button" data-demo="3">Use</button></div>
-        <div class="demo-row"><span>Alex: a grown-up, looks after Sky and Robin<br>grown.up@example.com · parent1</span><button class="btn small ghost" type="button" data-demo="6">Use</button></div>
-        <div class="demo-row"><span>Sam: a grown-up, looks after Jamie, Max and newplayer<br>sam@example.com · parent2</span><button class="btn small ghost" type="button" data-demo="7">Use</button></div>
-      </div>
     </section>
 
     <!-- ===================== PARENTS AND CARERS (its own page; in the real site: /parents-and-carers) ===================== -->
@@ -658,19 +648,6 @@
       </section>
       <button class="btn ghost" type="button" id="logOutButton">Log out</button>
     </section>
-
-    <!-- ===================== PROTOTYPE CONTROLS (delete in Claude Code) ===================== -->
-    <details class="proto" id="prototypeControls">
-      <summary>Prototype controls</summary>
-      <div class="inner">
-        <label><input type="checkbox" id="protoFailSaves"> Make saves fail (see the error message)</label>
-        <label><input type="checkbox" id="protoNoChores"> Pretend no tasks are set</label>
-        <button class="btn small ghost" type="button" id="protoAddXp">Add 5 task points (test unlocks)</button>
-        <button class="btn small ghost" type="button" id="protoAddMissionXp">Add 20 XP (test spending)</button>
-        <button class="btn small ghost" type="button" id="protoJumpTo100">Playing buddy to level 100 (test rebirth)</button>
-        <button class="btn small ghost" type="button" id="protoReset">Reset test data</button>
-      </div>
-    </details>
   </div>
 
   <nav class="tabbar" id="tabBar" aria-label="Main" hidden>
@@ -817,6 +794,9 @@
     <button class="toast-close" type="button" id="toastClose" aria-label="Close message">✕</button>
   </div>
 
+  <!-- Supabase: the client library and Voxie's project URL + public key (data/supabase-config.js is gitignored). -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/voxie/data/supabase-config.js"></script>
   <!-- Before content: the registry and everything content files are checked against or drawn with. -->
   <script src="/voxie/content/registry.js"></script>
   <script src="/voxie/content/themes.js"></script>
