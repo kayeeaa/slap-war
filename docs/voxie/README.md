@@ -111,7 +111,7 @@ Copy any file, give it a new id (lowercase-with-dashes), change the art and numb
 
 The prototype is one file with clearly labelled sections. Its comments carry the detail; this is the checklist.
 
-- ✅ **`data/dataLayer.js` now talks to Supabase** (done). The backend is in `supabase/migrations/` and `supabase/functions/`; [BACKEND.md](BACKEND.md) maps every dataLayer function to its table, RPC or Edge Function. The browser's project URL and public key are in `public/voxie/data/supabase-config.js` (gitignored; copy `supabase-config.example.js` to make it). The "New password" page for reset emails is `/voxie/new-passcode`.
+- ✅ **`data/dataLayer.js` now talks to Supabase** (done). The backend is in `supabase/migrations/` and `supabase/functions/`; [BACKEND.md](BACKEND.md) maps every dataLayer function to its table, RPC or Edge Function. The browser's project URL and public (anon) key are in `public/voxie/data/supabase-config.js`, committed on purpose so the live site gets it; the key is public by design and the database rules protect the data. The secret service_role key must never go in any file the browser loads. The "New password" page for reset emails is `/voxie/new-passcode`.
   - **When items, missions or powers change**, refresh the server's copy of the numbers (prices, powers, mission answers and ages) with `node scripts/voxie-sync-catalogue.js`, with `SUPABASE_SERVICE_ROLE_KEY` set. Never put that key in the browser.
   - **Database changes** go in a new file in `supabase/migrations/`, applied with `npx supabase db push`. Edge Functions deploy with `npx supabase functions deploy <name>`.
 - **Accounts are grown-up first.** Only grown-ups sign up (email and password). They add each child with a username, passcode and birth month and year, so every child account has a grown-up's agreement from the start.
@@ -123,7 +123,8 @@ The prototype is one file with clearly labelled sections. Its comments carry the
   - A child's only grown-up can't unlink; they can delete the child's account instead, which removes all of its data.
   - Payments later go on the grown-up's profile (one plan covers the family): a child gets paid features if any of their grown-ups pays.
 - ✅ **Prototype-only bits removed** (done): the homepage test accounts, the "Prototype controls" panel and `prototypeSettings`.
-- **Still to do before launch:** a word filter for game names and pet names (other children see them), and decide whether grown-ups should approve friend requests (see BACKEND.md, point 9).
+- **Still to do before launch:** a word filter for game names and pet names (other children see them).
+- **Decided for now (2026-10-04): grown-ups don't approve friend requests.** Children send and accept requests themselves. Revisit later (see BACKEND.md, point 9).
 - **Install the app:** a real install needs a web app manifest, icons and a service worker (see the comment in the install section).
 - **Sign-up switch:** `SIGN_UP_OPEN` turns sign-up on or off ("Coming soon"); anyone with an account can still log in.
 - **Missions:** 468 missions are in `content/missions/`, picked by the child's age. See [MISSIONS-README.md](MISSIONS-README.md) for how they work and [MISSIONS-LIST.md](MISSIONS-LIST.md) for the full list.

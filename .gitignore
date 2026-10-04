@@ -3,6 +3,3 @@ public/js/supabase-config.js
 
 # Supabase CLI local state
 supabase/.temp/
-
-# Voxie Supabase config (copy from supabase-config.example.js)
-public/voxie/data/supabase-config.js
