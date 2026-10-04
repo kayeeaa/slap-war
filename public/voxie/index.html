@@ -275,7 +275,7 @@
           <div class="field">
             <label class="label" for="parentAddUsername">Username</label>
             <input type="text" id="parentAddUsername" maxlength="20" autocomplete="off" autocapitalize="none" spellcheck="false">
-            <span class="hint">What they type to log in: 3 to 20 letters or numbers (a dash is fine). Don't use their real name: we never store it.</span>
+            <span class="hint">What they type to log in: 3 to 20 letters or numbers (a dash is fine).</span>
           </div>
           <div class="field">
             <span class="label" id="parentAddBirthLabel">Birth month and year</span>
@@ -329,10 +329,10 @@
       <form class="block" id="setupNameForm" novalidate>
         <div class="field">
           <label class="label" for="setupNameInput">Your name in the game</label>
-          <input type="text" id="setupNameInput" maxlength="16" autocomplete="off">
+          <input type="text" id="setupNameInput" maxlength="20" autocomplete="off">
         </div>
         <p class="error" id="setupNameError" role="alert"></p>
-        <p class="hint">Make one up: don't use your real name. Friends find you by this name. Up to 16 letters or numbers.</p>
+        <p class="hint">This is your username to start with. Keep it, or make up a new one: just don't use your real name. Friends find you by this name, and nobody else can have it. You can change it later in Settings.</p>
         <button class="btn" type="submit">Next</button>
       </form>
     </section>
@@ -343,6 +343,7 @@
       <h1>Pick your buddy</h1>
       <div class="stage compact" id="setupPetStage"><canvas class="stage-bg"></canvas><div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your chosen pet"></canvas></div></div>
       <div class="picker three" id="setupPetPicker" role="group" aria-label="Choose a pet"></div>
+      <p class="hint">More buddies to collect as you play: reach level 100 to rebirth as a new one.</p>
       <form class="block" id="setupPetForm" novalidate>
         <div class="field">
           <label class="label" for="setupPetNameInput" id="setupPetNameLabel">Name your buddy</label>
@@ -592,6 +593,20 @@
     <section class="screen" id="screenConfig" hidden>
       <div class="gamehead"><button type="button" class="btn small ghost" id="configBackButton">← Back</button></div>
       <p class="hint" id="configSignedInAs"></p>
+      <!-- The name friends see. Unique; changing it lets the child's grown-ups know. -->
+      <section class="block" aria-labelledby="gameNameHeading">
+        <h2 id="gameNameHeading">Your game name</h2>
+        <form class="login-pop-form" id="gameNameForm" novalidate>
+          <div class="field">
+            <label class="label" for="gameNameInput">The name friends see</label>
+            <input type="text" id="gameNameInput" maxlength="20" autocomplete="off">
+            <span class="hint">Make one up: don't use your real name. If you change it, we'll let your grown-up know.</span>
+          </div>
+          <p class="error" id="gameNameError" role="alert"></p>
+          <p class="hint" id="gameNameDone" role="status"></p>
+          <button class="btn small" type="submit" id="gameNameButton">Change my name</button>
+        </form>
+      </section>
       <section class="block">
         <h2>Settings</h2>
         <p class="settings-locked-note" id="settingsLockedNote" hidden></p>
@@ -785,6 +800,25 @@
       <ul class="ability-list" id="buySheetPowers"></ul>
       <p class="hint" id="buySheetMessage" role="status"></p>
       <button type="button" class="btn" id="buySheetBuy"></button>
+    </section>
+  </div>
+
+  <!-- Children: new tasks from their grown-up, all in one pop-up however many were added -->
+  <div class="sheet-backdrop" id="childNoticeSheet" hidden>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="childNoticeTitle">
+      <h2 id="childNoticeTitle">New tasks!</h2>
+      <ul class="ability-list" id="childNoticeList"></ul>
+      <p class="hint">Find them in Today's tasks on the days they're set for.</p>
+      <button type="button" class="btn" id="childNoticeOk">Let's do it!</button>
+    </section>
+  </div>
+
+  <!-- Grown-ups: news about their children (e.g. a game name change), shown when they open their account -->
+  <div class="sheet-backdrop" id="parentNoticeSheet" hidden>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="parentNoticeTitle">
+      <h2 id="parentNoticeTitle">News from your kids</h2>
+      <ul class="ability-list" id="parentNoticeList"></ul>
+      <button type="button" class="btn" id="parentNoticeOk">Got it</button>
     </section>
   </div>
 

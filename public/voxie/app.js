@@ -72,7 +72,7 @@ function resetSessionState() {
   myFriendRequests = []; mySentFriendRequests = []; renderFriendsBadge();
   parentChildren = []; parentOpenChildId = null; parentOverview = null;
   inventoryBrowser.mode = houseBrowser.mode = "type"; lastPlacesScreen = "screenHouse";
-  ["itemSheet", "buySheet", "chanceSheet"].forEach(id => element(id).hidden = true);
+  ["itemSheet", "buySheet", "chanceSheet", "parentNoticeSheet", "childNoticeSheet"].forEach(id => element(id).hidden = true);
   hideLevelUp(); hideSaveError(); gameLoadedOnDay = null;
 }
 function showSaveError(message, retryAction) {
@@ -86,12 +86,20 @@ function hideSaveError() { element("toast").hidden = true; retryLastFailedAction
 element("toastClose").onclick = hideSaveError;
 element("toastRetry").onclick = () => { const action = retryLastFailedAction; hideSaveError(); if (action) action(); };
 
-function validateName(rawName) {
+/* Game names and buddy names. Dashes and underscores are allowed, since a game name starts as the username. */
+function validateName(rawName, maxLength = MAX_NAME_LENGTH) {
   const name = rawName.trim();
   if (!name) return { name, error: "Type a name first." };
-  if (name.length > MAX_NAME_LENGTH) return { name, error: `That's too long. Use up to ${MAX_NAME_LENGTH} letters or numbers.` };
-  if (!/^[\p{L}\p{N} ]+$/u.test(name)) return { name, error: "Use letters, numbers and spaces only." };
+  if (name.length > maxLength) return { name, error: `That's too long. Use up to ${maxLength} letters or numbers.` };
+  if (!/^[\p{L}\p{N} _-]+$/u.test(name)) return { name, error: "Use letters, numbers, spaces and dashes only." };
   return { name, error: "" };
+}
+const NAME_TAKEN_MESSAGE = "Someone's already got that name. Try adding a number or another word.";
+/* Checks a game name isn't taken before saving it. Your own current name always counts as free. */
+async function gameNameError(name) {
+  if (currentProfile && name.toLowerCase() === (currentProfile.display_name || "").toLowerCase()) return "";
+  try { return (await dataLayer.isGameNameAvailable(name)) ? "" : NAME_TAKEN_MESSAGE; }
+  catch (error) { return ""; }   // can't check right now: the server checks again when it saves
 }
 function showFieldError(inputId, errorId, message) {
   element(errorId).textContent = message;
@@ -332,24 +340,30 @@ function startSetup() {
   showFieldError("setupNameInput", "setupNameError", "");
   showScreen("screenSetupName");
 }
-element("setupNameForm").onsubmit = event => {
+/* Step 1: the game name starts as their username; they can keep it or make one up (it must not be taken). */
+element("setupNameForm").onsubmit = async event => {
   event.preventDefault();
-  const { name, error } = validateName(element("setupNameInput").value);
+  const { name, error } = validateName(element("setupNameInput").value, MAX_GAME_NAME_LENGTH);
   showFieldError("setupNameInput", "setupNameError", error);
   if (error) return;
+  const takenError = await gameNameError(name);
+  showFieldError("setupNameInput", "setupNameError", takenError);
+  if (takenError) return;
   setupDraft.displayName = name;
   openSetupPet();
 };
 
+/* Step 2: only the starter buddies. The rest are collected by rebirth. */
 function openSetupPet() {
   showScreen("screenSetupPet");
+  const starterOptions = PET_OPTIONS.filter(option => STARTER_PET_TYPES.includes(option.id));
   const selectPet = petType => {
     setupDraft.petType = petType;
     renderStage(element("setupPetStage"), setupPreviewLook());
-    renderOptionPicker("setupPetPicker", PET_OPTIONS, petType, 1, selectPet, (canvas, optionId) => drawPet(canvas, optionId, { fitTight: true }));
+    renderOptionPicker("setupPetPicker", starterOptions, petType, 1, selectPet, (canvas, optionId) => drawPet(canvas, optionId, { fitTight: true }));
     element("setupPetNameLabel").textContent = `Name your ${PET_TYPES[petType].label.toLowerCase()}`;
   };
-  selectPet(setupDraft.petType);
+  selectPet(starterOptions.some(option => option.id === setupDraft.petType) ? setupDraft.petType : starterOptions[0].id);
   element("setupPetNameInput").value = setupDraft.petName;
   showFieldError("setupPetNameInput", "setupPetNameError", "");
 }
@@ -382,6 +396,14 @@ async function confirmSetup() {
     hideSaveError();
     await openGame();
   } catch (error) {
+    button.disabled = false;
+    // Someone took their game name in the meantime: back to step 1 to pick another.
+    if (error.message === "name-taken") {
+      showScreen("screenSetupName");   // keeps their buddy and colour choices in setupDraft
+      element("setupNameInput").value = setupDraft.displayName;
+      showFieldError("setupNameInput", "setupNameError", NAME_TAKEN_MESSAGE);
+      return;
+    }
     showSaveError("Couldn't save your buddy. Check your internet and try again.", confirmSetup);
   }
   button.disabled = false;
@@ -411,7 +433,7 @@ document.querySelectorAll(".tab").forEach(tab => tab.onclick = () => {
   if (tabName === "buddies") openBuddies();
   if (tabName === "friends") openFriends();
 });
-function openHome() { showScreen("screenGame"); renderHome(); }
+function openHome() { showScreen("screenGame"); renderHome(); showNewTaskNotifications(true); }
 /* Places remembers whether House or Locations was open last. */
 let lastPlacesScreen = "screenHouse";
 document.querySelectorAll("[data-places]").forEach(button => button.onclick = () => {
@@ -463,7 +485,38 @@ async function openGame() {
   showScreen("screenGame");
   renderHome();
   refreshFriendRequests();
+  showNewTaskNotifications(false);
 }
+/* "New tasks!" pop-up: every task a grown-up added since the child last looked, in ONE pop-up, grouped by grown-up.
+   reloadTasks: fetch the task list again first (when they were added while the game was already open). */
+let shownChildNotificationIds = [];
+async function showNewTaskNotifications(reloadTasks) {
+  let notifications;
+  try { notifications = await dataLayer.loadMyTaskNotifications(); } catch (error) { return; }
+  const newTasks = notifications.filter(notice => notice.kind === "task-added");
+  if (!newTasks.length || element("screenGame").hidden || !element("childNoticeSheet").hidden) return;
+  if (reloadTasks) {
+    try { myScheduledTasks = await dataLayer.loadMyScheduledTasks(); renderChores(); } catch (error) {}
+  }
+  shownChildNotificationIds = newTasks.map(notice => notice.id);
+  const byGrownUp = {};
+  newTasks.forEach(notice => { const who = notice.fromName || "Your grown-up"; (byGrownUp[who] = byGrownUp[who] || []).push(notice.taskTitle); });
+  element("childNoticeTitle").textContent = newTasks.length === 1 ? "A new task!" : "New tasks!";
+  element("childNoticeList").innerHTML = Object.entries(byGrownUp).map(([who, titles]) =>
+    `<li><span class="power-text"><b>${escapeHtml(who)} added ${titles.length === 1 ? "a task" : `${titles.length} tasks`}</b>`
+    + `<span>${titles.map(escapeHtml).join(", ")}</span></span></li>`).join("");
+  element("childNoticeSheet").hidden = false;
+  element("childNoticeOk").focus();
+}
+function closeNewTaskNotifications() {
+  if (element("childNoticeSheet").hidden) return;
+  element("childNoticeSheet").hidden = true;
+  dataLayer.markMyTaskNotificationsSeen(shownChildNotificationIds).catch(() => {});   // if this fails, they'll see it again next time
+  shownChildNotificationIds = [];
+}
+element("childNoticeOk").onclick = closeNewTaskNotifications;
+element("childNoticeSheet").addEventListener("click", event => { if (event.target === element("childNoticeSheet")) closeNewTaskNotifications(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeNewTaskNotifications(); });
 function renderHome() {
   element("taskSnackHint").textContent = `Each task done = 1 level point and a snack for ${petName()}.`;
   maybeShowInstallBanner();
@@ -2052,7 +2105,10 @@ function openConfigScreen() {
   renderInstallSection();
   element("scheduleError").textContent = "";
   renderScheduledTasks();
-  element("configSignedInAs").textContent = `Logged in as ${currentProfile.display_name}.`;
+  element("configSignedInAs").textContent = `Logged in as ${currentProfile.username || currentProfile.display_name}.`;
+  element("gameNameInput").value = currentProfile.display_name || "";
+  ["gameNameError", "gameNameDone"].forEach(id => element(id).textContent = "");
+  element("gameNameInput").removeAttribute("aria-invalid");
   renderChildSettings();
   element("settingsError").textContent = "";
   // A grown-up may have changed these since the game loaded, so check again.
@@ -2063,6 +2119,26 @@ function openConfigScreen() {
     renderChildSettings();
   }).catch(() => {});
 }
+/* Changing your game name (the name friends see). It must not be taken, and your grown-ups are told. */
+element("gameNameForm").onsubmit = async event => {
+  event.preventDefault();
+  element("gameNameDone").textContent = "";
+  const { name, error } = validateName(element("gameNameInput").value, MAX_GAME_NAME_LENGTH);
+  showFieldError("gameNameInput", "gameNameError", error);
+  if (error || name === currentProfile.display_name) return;
+  element("gameNameButton").disabled = true;
+  const takenError = await gameNameError(name);
+  showFieldError("gameNameInput", "gameNameError", takenError);
+  if (!takenError) {
+    try {
+      currentProfile = await dataLayer.updateMyProfile({ ...lookFromProfile(currentProfile), displayName: name });
+      element("gameNameDone").textContent = `Done! Friends now see you as ${name}. We've let ${myGrownUpsLabel()} know.`;
+    } catch (saveError) {
+      showFieldError("gameNameInput", "gameNameError", saveError.message === "name-taken" ? NAME_TAKEN_MESSAGE : "Couldn't change it. Check your internet and try again.");
+    }
+  }
+  element("gameNameButton").disabled = false;
+};
 /* "Alex", "Alex or Sam", or "your grown-up" if nobody's linked. */
 function myGrownUpsLabel() {
   const names = (currentProfile && currentProfile.grown_up_names) || [];
@@ -2195,7 +2271,30 @@ async function openParentHome(childIdToOpen = null) {
   const stillLinked = id => parentChildren.some(child => child.id === id);
   const tabToOpen = [childIdToOpen, parentOpenChildId].find(stillLinked) || (parentChildren[0] ? parentChildren[0].id : "add");
   await openParentTab(tabToOpen);
+  showParentNotifications();
 }
+/* Pop-up for news about their children, e.g. a child changed their game name. Shown once: closing marks them seen. */
+let shownNotificationIds = [];
+async function showParentNotifications() {
+  let notifications;
+  try { notifications = await dataLayer.loadMyNotifications(); } catch (error) { return; }
+  if (!notifications.length || element("screenParentHome").hidden) return;
+  shownNotificationIds = notifications.map(notice => notice.id);
+  element("parentNoticeList").innerHTML = notifications.map(notice =>
+    `<li><span class="power-text"><b>${escapeHtml(notice.oldName)} is now ${escapeHtml(notice.newName)}</b>`
+    + `<span>Your child changed their game name, the name friends see. Their login username hasn't changed.</span></span></li>`).join("");
+  element("parentNoticeSheet").hidden = false;
+  element("parentNoticeOk").focus();
+}
+function closeParentNotifications() {
+  if (element("parentNoticeSheet").hidden) return;
+  element("parentNoticeSheet").hidden = true;
+  dataLayer.markNotificationsSeen(shownNotificationIds).catch(() => {});   // if this fails, they'll see it again next time
+  shownNotificationIds = [];
+}
+element("parentNoticeOk").onclick = closeParentNotifications;
+element("parentNoticeSheet").addEventListener("click", event => { if (event.target === element("parentNoticeSheet")) closeParentNotifications(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeParentNotifications(); });
 function drawChildBuddy(canvas, child) {
   canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
   if (child.look) drawPet(canvas, child.look.petType, { fitTight: true, level: child.look.level, equipped: child.look.equipped, petLook: child.look.petLook, itemColours: child.look.itemColours || {} });

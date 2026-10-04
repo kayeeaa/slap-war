@@ -47,5 +47,7 @@ const REBIRTH_EVERY_LEVELS = 100;
 function rebirthsEarned(buddyLevels) { return buddyLevels.reduce((total, level) => total + Math.floor(level / REBIRTH_EVERY_LEVELS), 0); }
 /* You start with one buddy, so each extra buddy used up one rebirth. */
 function rebirthsAvailable(buddyLevels) { return Math.max(0, rebirthsEarned(buddyLevels) - (buddyLevels.length - 1)); }
-const DEFAULT_PET_LOOK = { bodyColour: "original", face: "happy", arms: "down", width: "normal", height: "normal" };
+/* New children pick their first buddy from these at setup. Every other buddy type is collected by rebirth. */
+const STARTER_PET_TYPES = ["axolotl", "seal", "capybara"];
+const DEFAULT_PET_LOOK ={ bodyColour: "original", face: "happy", arms: "down", width: "normal", height: "normal" };
 const findOption = (options, optionId) => options.find(option => option.id === optionId) || options[0];

@@ -24,7 +24,8 @@ function shiftDate(isoDate, days) { const date = new Date(isoDate + "T12:00:00Z"
 
 const LINK_CODE_HOURS = 24;
 const MAX_CHILDREN_PER_GROWN_UP = 8;
-const MAX_NAME_LENGTH = 16; // a child's name in Voxie (the setup screen uses the same limit)
+const MAX_NAME_LENGTH = 16;        // a buddy's name
+const MAX_GAME_NAME_LENGTH = 20;   // a child's game name: starts as their username (also up to 20), must be unique
 
 /* The level the child was when they got an item: its unlock level, or when they bought / won it. */
 function gotAtLevelFor(item, gotAtLevels) {
@@ -94,8 +95,18 @@ const dataLayer = {
   async signOut() { await supabaseClient.auth.signOut(); },
   /** First-time setup. look = { displayName, petType, petName, themeColour, location, petLook }. Returns the profile. */
   async saveProfileSetup(look) { return callRpc("save_profile_setup", { p_look: look }); },
-  /** Changes from the Buddies screen (same look shape). Returns the profile. */
+  /** Changes from the Buddies and Settings screens (same look shape). Throws Error("name-taken") if the game name is
+      another child's game name or username. Changing the game name notifies the child's grown-ups. Returns the profile. */
   async updateMyProfile(look) { return callRpc("update_my_profile", { p_look: look }); },
+  /** The child's unseen notifications, oldest first: [{ id, kind: "task-added", fromName, taskTitle }].
+      One row per task a grown-up added; the app shows them together in one pop-up. */
+  async loadMyTaskNotifications() {
+    const rows = await readMyRows("child_notifications", "id, kind, from_name, task_title, created_at", query => query.is("seen_at", null).order("created_at"));
+    return rows.map(row => ({ id: row.id, kind: row.kind, fromName: row.from_name, taskTitle: row.task_title }));
+  },
+  async markMyTaskNotificationsSeen(notificationIds) { return callRpc("mark_my_notifications_seen", { p_ids: notificationIds }); },
+  /** Is this game name free (not another child's game name or username)? Game names are unique so friends can't mix children up. */
+  async isGameNameAvailable(name) { return callRpc("is_game_name_available", { p_name: name }); },
   /** [{ id, petType, petName, petLook, themeColour, isActive }] oldest first. */
   async loadMyBuddies() {
     const [rows, profile] = await Promise.all([
@@ -221,6 +232,15 @@ const dataLayer = {
   },
   /** [{ id, displayName, setupComplete, level, petName, look }] */
   async loadMyChildren() { return callRpc("load_my_children"); },
+  /** The grown-up's unseen notifications, oldest first: [{ id, childId, kind: "game-name-changed", oldName, newName, createdAt }] */
+  async loadMyNotifications() {
+    const parentId = await requireUserId();
+    const { data, error } = await supabaseClient.from("parent_notifications").select("id, child_id, kind, old_name, new_name, created_at")
+      .eq("parent_id", parentId).is("seen_at", null).order("created_at");
+    if (error) throw new Error(error.message || "load-failed");
+    return data.map(row => ({ id: row.id, childId: row.child_id, kind: row.kind, oldName: row.old_name, newName: row.new_name, createdAt: row.created_at }));
+  },
+  async markNotificationsSeen(notificationIds) { return callRpc("mark_notifications_seen", { p_ids: notificationIds }); },
   /** { child, settings, tasks, stats, login:{ username }, grownUps, birth:{ month, year } }. Throws Error("not-your-child"). */
   async loadChildOverview(childId) {
     const overview = await callRpc("load_child_overview", { p_child_id: childId });
