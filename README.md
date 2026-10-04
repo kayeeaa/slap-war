@@ -18,6 +18,7 @@ A family web app with two parts: a family planner for daily schedules and meals,
 | `/planner/onboarding/` | Food preference questionnaire (first login only) |
 | `/planner/dashboard/` | Daily/weekly plan view |
 | `/slap-war/` | Snap! reflex matching game |
+| `/voxie/` | Voxie: chores, daily missions and a pixel buddy for kids (see `docs/voxie/`) |
 
 ---
 

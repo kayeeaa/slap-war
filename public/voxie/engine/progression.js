@@ -15,6 +15,13 @@ const BIGGER_BUDDY_LEVEL = 5;
 const MAX_TASKS_PER_DAY = 10;
 /* Passcodes: at least this many characters (Supabase's minimum password length must match). */
 const MIN_PASSCODE_LENGTH = 6;
+/* A grown-up gives each child's birth MONTH AND YEAR (never a full date of birth, real name, email or gender). It's
+   collected ONLY to pick missions that suit the child's age, which is worked out each day so missions grow with them.
+   The birth year can be from MAX_CHILD_AGE to MIN_CHILD_AGE years ago. */
+const MIN_CHILD_AGE = 4, MAX_CHILD_AGE = 16;
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/* Timed missions start switched off for a child under this age: a 5–7 year old may need someone to read to them. */
+const TIMED_MISSIONS_FROM_AGE = 8;
 const MAX_MISSIONS_PER_DAY = 3;
 /* Scheduled tasks: repeat on chosen days, up to MAX_TIMES_PER_DAY times a day (e.g. brush teeth twice). */
 const MAX_SCHEDULED_TASKS = 15;

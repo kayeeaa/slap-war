@@ -100,13 +100,13 @@
 
       <div class="demo">
         <strong>Prototype only: test accounts</strong>
-        <div class="demo-row"><span>Charlie: added by Sam, not set up yet (sees setup)<br>newplayer · blocks1</span><button class="btn small ghost" type="button" data-demo="1">Use</button></div>
+        <div class="demo-row"><span>newplayer: added by Sam, not set up yet (sees setup)<br>newplayer · blocks1</span><button class="btn small ghost" type="button" data-demo="1">Use</button></div>
         <div class="demo-row"><span>Sky: lots of XP, 1 task from level 6, friend request waiting<br>sky · blocks2</span><button class="btn small ghost" type="button" data-demo="2">Use</button></div>
         <div class="demo-row"><span>Jamie: friend request waiting<br>jamie · blocks4</span><button class="btn small ghost" type="button" data-demo="4">Use</button></div>
         <div class="demo-row"><span>Max: friend request waiting<br>max · blocks5</span><button class="btn small ghost" type="button" data-demo="5">Use</button></div>
         <div class="demo-row"><span>Robin: an angel buddy, friend request waiting<br>robin · blocks3</span><button class="btn small ghost" type="button" data-demo="3">Use</button></div>
         <div class="demo-row"><span>Alex: a grown-up, looks after Sky and Robin<br>grown.up@example.com · parent1</span><button class="btn small ghost" type="button" data-demo="6">Use</button></div>
-        <div class="demo-row"><span>Sam: a grown-up, looks after Jamie, Max and Charlie<br>sam@example.com · parent2</span><button class="btn small ghost" type="button" data-demo="7">Use</button></div>
+        <div class="demo-row"><span>Sam: a grown-up, looks after Jamie, Max and newplayer<br>sam@example.com · parent2</span><button class="btn small ghost" type="button" data-demo="7">Use</button></div>
       </div>
     </section>
 
@@ -136,13 +136,13 @@
           <li><strong>No real money, ever.</strong> XP is the only currency, and it only comes from missions.</li>
           <li><strong>No adverts.</strong></li>
           <li><strong>Private.</strong> Friends only see each other's buddy, level and XP. No chat, no photos.</li>
-          <li><strong>You're in charge of the account.</strong> You make your child's login, so we never ask for their email or age.</li>
+          <li><strong>You're in charge of the account.</strong> We never ask for your child's real name, email or full date of birth: just a username you make up and the month and year they were born. We only use that to pick missions that suit their age.</li>
           <li><strong>Mystery boxes and "Take a chance" can be switched off.</strong></li>
           <li><strong>No timers if they don't suit your child.</strong> Timed missions can be turned off.</li>
         </ul>
         <h3>Your grown-up account</h3>
         <ul class="parents-list">
-          <li><strong>A tab for each child.</strong> Add them with a username and passcode you choose, and reset it if they forget.</li>
+          <li><strong>A tab for each child.</strong> Add them with a username and passcode you choose (no real name needed), and reset the passcode if they forget.</li>
           <li><strong>Two grown-ups?</strong> Invite the other one with a code, so you can both look after your kids.</li>
           <li><strong>Set their tasks</strong> on the days they happen, like homework on school days or feeding the cat every day.</li>
           <li><strong>Choose their settings</strong> (timers, Mystery boxes, streaks) and decide whether they can change them themselves.</li>
@@ -244,6 +244,22 @@
                 <button class="btn small" type="submit" id="parentPasscodeButton">Set new passcode</button>
               </form>
             </section>
+            <section class="block" aria-labelledby="parentBirthHeading">
+              <h2 id="parentBirthHeading">Age</h2>
+              <form class="login-pop-form" id="parentBirthForm" novalidate>
+                <div class="field">
+                  <span class="label" id="parentBirthLabel">Birth month and year</span>
+                  <div class="birth-row" role="group" aria-labelledby="parentBirthLabel">
+                    <select id="parentBirthMonth" aria-label="Birth month"></select>
+                    <select id="parentBirthYear" aria-label="Birth year"></select>
+                  </div>
+                  <span class="hint" id="parentBirthHint"></span>
+                </div>
+                <p class="error" id="parentBirthError" role="alert"></p>
+                <p class="hint" id="parentBirthDone" role="status"></p>
+                <button class="btn small" type="submit" id="parentBirthButton">Save</button>
+              </form>
+            </section>
             <section class="block" aria-labelledby="parentGrownUpsHeading">
               <h2 id="parentGrownUpsHeading">Grown-ups</h2>
               <ul class="grown-up-list" id="parentGrownUpList"></ul>
@@ -267,14 +283,17 @@
         <h2 id="parentAddHeading">Add a child</h2>
         <form class="login-pop-form" id="parentAddForm" novalidate>
           <div class="field">
-            <label class="label" for="parentAddName">Their name</label>
-            <input type="text" id="parentAddName" maxlength="16" autocomplete="off">
-            <span class="hint">What they're called in Voxie. They can change it when they set up.</span>
-          </div>
-          <div class="field">
             <label class="label" for="parentAddUsername">Username</label>
             <input type="text" id="parentAddUsername" maxlength="20" autocomplete="off" autocapitalize="none" spellcheck="false">
-            <span class="hint">What they type to log in: 3 to 20 letters or numbers (a dash is fine). Avoid their full name.</span>
+            <span class="hint">What they type to log in: 3 to 20 letters or numbers (a dash is fine). Don't use their real name: we never store it.</span>
+          </div>
+          <div class="field">
+            <span class="label" id="parentAddBirthLabel">Birth month and year</span>
+            <div class="birth-row" role="group" aria-labelledby="parentAddBirthLabel">
+              <select id="parentAddBirthMonth" aria-label="Birth month"></select>
+              <select id="parentAddBirthYear" aria-label="Birth year"></select>
+            </div>
+            <span class="hint">So we can pick missions that suit their age. We only keep the month and year.</span>
           </div>
           <div class="field">
             <label class="label" for="parentAddPasscode">Passcode</label>
@@ -323,7 +342,7 @@
           <input type="text" id="setupNameInput" maxlength="16" autocomplete="off">
         </div>
         <p class="error" id="setupNameError" role="alert"></p>
-        <p class="hint">Up to 16 letters or numbers. You can change it any time.</p>
+        <p class="hint">Make one up: don't use your real name. Friends find you by this name. Up to 16 letters or numbers.</p>
         <button class="btn" type="submit">Next</button>
       </form>
     </section>

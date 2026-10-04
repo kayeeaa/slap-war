@@ -124,8 +124,13 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 
 /* fields */
 .field{display:flex;flex-direction:column;gap:6px}
-.field input{font:inherit;font-size:18px;padding:10px 12px;border:2px solid var(--line);border-bottom-width:4px;background:var(--bg);color:var(--ink);width:100%}
-.field input[aria-invalid="true"]{border-color:var(--danger)}
+.field input,.field select{font:inherit;font-size:18px;padding:10px 12px;border:2px solid var(--line);border-bottom-width:4px;background:var(--bg);color:var(--ink);width:100%}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"]{border-color:var(--danger)}
+.field select{min-height:48px;cursor:pointer}
+select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+/* Birth month and year: two dropdowns side by side */
+.birth-row{display:grid;grid-template-columns:3fr 2fr;gap:8px}
+.birth-row select{min-width:0}
 .error{color:var(--danger);font-size:15px;font-weight:700}
 .error:empty{display:none}
 

@@ -18,8 +18,13 @@
      (this app is family-only). Search and friends' progress must come from database functions that return
      only the safe fields shown here (name, pet, level, streak), never raw tables.
    ACCOUNTS ARE GROWN-UP FIRST. Only a grown-up signs up (signUpParent: email + password). They add each child
-     (addChild: name, username, passcode), so a grown-up has agreed to every child account, no child email or age is
-     ever collected, and children are linked to their grown-up from the start.
+     (addChild: username, passcode, birth month and year), so a grown-up has agreed to every child account, and children
+     are linked to their grown-up from the start. A child's REAL NAME, EMAIL, FULL DATE OF BIRTH AND GENDER ARE NEVER
+     COLLECTED (UK GDPR data minimisation, ICO Children's code): the only things held about a child are their username
+     and birth month and year (plus the made-up game name they pick at setup, display_name, which is empty until then,
+     so the username is shown instead). profiles.birth_month (1–12) and birth_year are given by the grown-up, who can
+     change them on the child's tab (setChildBirthMonth); the child can't. They're used ONLY to work out the child's age
+     each day and pick missions that suit it. Keep them out of anything friends or search can see.
      Child logins: Supabase auth needs an email, so addChild runs in a database/edge function with the service role:
      auth.admin.createUser({ email: "<child id>@kids.voxie.invalid", password, email_confirm: true }) — a hidden
      address nobody can receive mail at — and stores the username on the profile (usernames are unique, lowercase).
@@ -43,18 +48,20 @@
    Powers: worked out on the SERVER from the child's equipped_items + item_xp (activePowersFor), never sent by the
      app. They change mission XP and daily limits (saveMissionCompletion), Mystery box odds, Take a chance odds,
      Shop prices and the weekly free item (claimWeeklyTreasure). mission_completions also stores used_hint and
-     used_think_again so the daily limits can be checked.
+     used_think_again so the daily limits can be checked, and did_it (true) for a Feel good mission (choice_index null).
+   Missions: today's picks come from the child's age and mission_completions history (engine/missions.js), so
+     loadProgressSummary returns missionsLastDoneOn. saveMissionCompletion should check the mission suits the child's age.
    "look" objects passed in: { displayName, petType, petName, themeColour, location, petLook }
    ====================================================================== */
 function getTodayInUk() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()); }
 function shiftDate(isoDate, days) { const date = new Date(isoDate + "T12:00:00Z"); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); }
 
-const FAKE_STORAGE_KEY = "voxie-prototype-v27";
+const FAKE_STORAGE_KEY = "voxie-prototype-v29";
 const prototypeSettings = { failSaves: false, hideChores: false,
   forcedRandom: null, forcedOutcomeRandom: null }; // tests only: fix the dice (0–1) instead of Math.random()
 
 function buildFakeDatabase() {
-  const today = getTodayInUk();
+  const today = getTodayInUk(), thisYear = Number(today.slice(0, 4));
   const database = {
     signedInUserId: null,
     prototypeBonusLevelPoints: { "buddy-robin-1": pointsNeededForLevel(100) + 20 }, // by buddy id; Robin's Nugget is level 101
@@ -68,15 +75,16 @@ function buildFakeDatabase() {
       { id: "parent-1", email: "grown.up@example.com", passcode: "parent1" },
       { id: "parent-2", email: "sam@example.com", passcode: "parent2" }
     ],
+    /* Test ages: newplayer 9, Sky 10, Robin 12, Jamie 6 (Feel good-heavy 5–7 missions, no timer), Max not given (8–13 missions). */
     profiles: {
-      "child-1": { id: "child-1", role: "child", chance_features: true, display_name: "Charlie", theme_colour: "green", location: "home", active_buddy_id: null, equipped_items: [], timed_missions: true, reset_streak_on_miss: true, setup_complete: false },
-      "child-2": { id: "child-2", role: "child", child_can_change_settings: false, chance_features: true, display_name: "Sky", theme_colour: "blue", location: "home", active_buddy_id: "buddy-sky-1", timed_missions: true, reset_streak_on_miss: true, equipped_items: ["pixel-sword", "crown", "pet-chick", "potted-plant", "window", "rug"], setup_complete: true },
-      "child-4": { id: "child-4", role: "child", chance_features: true, display_name: "Jamie", theme_colour: "teal", location: "beach", active_buddy_id: "buddy-jamie-1", timed_missions: true, reset_streak_on_miss: true, equipped_items: ["party-hat"], setup_complete: true },
+      "child-1": { id: "child-1", role: "child", chance_features: true, display_name: "", birth_month: 1, birth_year: thisYear - 9, theme_colour: "green", location: "home", active_buddy_id: null, equipped_items: [], timed_missions: true, reset_streak_on_miss: true, setup_complete: false },
+      "child-2": { id: "child-2", role: "child", child_can_change_settings: false, chance_features: true, display_name: "Sky", birth_month: 1, birth_year: thisYear - 10, theme_colour: "blue", location: "home", active_buddy_id: "buddy-sky-1", timed_missions: true, reset_streak_on_miss: true, equipped_items: ["pixel-sword", "crown", "pet-chick", "potted-plant", "window", "rug"], setup_complete: true },
+      "child-4": { id: "child-4", role: "child", chance_features: true, display_name: "Jamie", birth_month: 1, birth_year: thisYear - 6, theme_colour: "teal", location: "beach", active_buddy_id: "buddy-jamie-1", timed_missions: false, reset_streak_on_miss: true, equipped_items: ["party-hat"], setup_complete: true },
       "child-5": { id: "child-5", role: "child", chance_features: true, display_name: "Max", theme_colour: "purple", location: "home", active_buddy_id: "buddy-max-1", timed_missions: true, reset_streak_on_miss: true, equipped_items: [], setup_complete: true },
-      "child-3": { id: "child-3", role: "child", chance_features: true, display_name: "Robin", theme_colour: "orange", location: "mountains", active_buddy_id: "buddy-robin-2", timed_missions: false, reset_streak_on_miss: true, equipped_items: ["hero-cape", "headset", "pickaxe", "pet-chick"], setup_complete: true },
+      "child-3": { id: "child-3", role: "child", chance_features: true, display_name: "Robin", birth_month: 1, birth_year: thisYear - 12, theme_colour: "orange", location: "mountains", active_buddy_id: "buddy-robin-2", timed_missions: false, reset_streak_on_miss: true, equipped_items: ["hero-cape", "headset", "pickaxe", "pet-chick"], setup_complete: true },
       /* A parent: linked to Sky and Robin (see family_links). */
       "parent-1": { id: "parent-1", role: "parent", display_name: "Alex" },
-      /* Another grown-up: linked to Jamie, Max and the new player (Charlie). */
+      /* Another grown-up: linked to Jamie, Max and the new player (newplayer, no game name yet). */
       "parent-2": { id: "parent-2", role: "parent", display_name: "Sam" }
     },
     family_links: [
@@ -277,8 +285,16 @@ function fakeProgressSummary(childId) {
     daysPlayedTotal: daysPlayedDates.length, daysPlayedDates,
     missionsDoneToday: missionRows.filter(row => row.completed_on === today).map(row => ({ missionId: row.mission_id, xpAwarded: row.xp_awarded })),
     hintsUsedToday: missionRows.filter(row => row.completed_on === today && row.used_hint).length,
-    thinkAgainsUsedToday: missionRows.filter(row => row.completed_on === today && row.used_think_again).length
+    thinkAgainsUsedToday: missionRows.filter(row => row.completed_on === today && row.used_think_again).length,
+    missionsLastDoneOn: missionRows.filter(row => row.completed_on < today)
+      .reduce((lastDone, row) => ({ ...lastDone, [row.mission_id]: row.completed_on > (lastDone[row.mission_id] || "") ? row.completed_on : lastDone[row.mission_id] }), {})
   };
+}
+/* Birth month (1–12) and year, checked: the child must be MIN_CHILD_AGE to MAX_CHILD_AGE now. Throws Error("bad-birth-month"). */
+function checkBirthMonth(birthMonth, birthYear) {
+  const age = Number.isInteger(birthMonth) && Number.isInteger(birthYear) && birthMonth >= 1 && birthMonth <= 12 ? ageFromBirthMonth(birthMonth, birthYear) : null;
+  if (age === null || age < MIN_CHILD_AGE || age > MAX_CHILD_AGE) throw new Error("bad-birth-month");
+  return age;
 }
 
 /* ---------- Parent accounts ----------
@@ -340,7 +356,8 @@ function fakeChildStats(childId) {
     return { date, weekDay: getWeekDayIdInUk(date), done, set: Math.max(done, fakeTaskCountForDay(childId, date)) };
   });
   const missionRows = fakeDatabase.mission_completions.filter(row => row.child_id === childId);
-  const answered = missionRows.map(row => ({ row, mission: MISSIONS.find(mission => mission.id === row.mission_id) })).filter(entry => entry.mission);
+  // "Questions right" counts quiz and scenario answers only: Feel good missions have no right answer.
+  const answered = missionRows.map(row => ({ row, mission: MISSIONS.find(mission => mission.id === row.mission_id) })).filter(entry => entry.mission && !isChallenge(entry.mission));
   const progress = fakeProgressSummary(childId);
   return {
     lastSevenDays,
@@ -350,6 +367,7 @@ function fakeChildStats(childId) {
     missionsDoneToday: missionRows.filter(row => row.completed_on === today).length,
     missionsDoneThisWeek: missionRows.filter(row => row.completed_on >= lastSevenDays[0].date).length,
     missionsPossibleThisWeek: 7 * MAX_MISSIONS_PER_DAY,
+    feelGoodDoneThisWeek: missionRows.filter(row => row.completed_on >= lastSevenDays[0].date && row.did_it).length,
     questionsAnswered: answered.length,
     questionsRight: answered.filter(entry => isRightAnswer(entry.mission, entry.row.choice_index)).length,
     streak: calculateStreak(progress.daysPlayedDates, today, profile.reset_streak_on_miss !== false, fakeActivePowers(childId)["streak-shield"] || 0)
@@ -797,14 +815,18 @@ const dataLayer = {
       fakeDatabase.chore_completions = fakeDatabase.chore_completions.filter(row => !(row.child_id === childId && row.chore_id === choreId && row.completed_on === today));
     });
   },
-  /** choiceIndex is null if the timer ran out. The SERVER works out the XP (with Brain boost) and checks the daily limits
-      (missions, plus Bonus mission; hints and think-agains against their powers). xp_awarded is stored so XP history
-      doesn't change if a mission is edited later. Returns { xpAwarded, brainBoost }. Throws Error("daily-limit") or Error("no-power"). */
-  async saveMissionCompletion(missionId, choiceIndex, { usedHint = false, usedThinkAgain = false } = {}) {
+  /** choiceIndex is null if the timer ran out, and for a Feel good mission, which is only saved when they tap "I did it!"
+      (didIt: true; it earns its difficulty in XP, with no powers). The SERVER works out the XP (with Brain boost) and checks
+      the mission suits the child's age and the daily limits (missions, plus Bonus mission; hints and think-agains against
+      their powers). xp_awarded is stored so XP history doesn't change if a mission is edited later.
+      Returns { xpAwarded, brainBoost }. Throws Error("daily-limit"), Error("not-for-age") or Error("no-power"). */
+  async saveMissionCompletion(missionId, choiceIndex, { usedHint = false, usedThinkAgain = false, didIt = false } = {}) {
     return fakeRequest(true, () => {
-      const childId = requireChildUserId(), today = getTodayInUk(), powers = fakeActivePowers(childId);
+      const childId = requireChildUserId(), today = getTodayInUk(), powers = fakeActivePowers(childId), profile = fakeDatabase.profiles[childId];
       const mission = MISSIONS.find(candidate => candidate.id === missionId);
       if (!mission) throw new Error("unknown-mission");
+      if (!missionsForAge(ageFromBirthMonth(profile.birth_month, profile.birth_year)).includes(mission)) throw new Error("not-for-age");
+      if (isChallenge(mission) && (!didIt || choiceIndex !== null || usedHint || usedThinkAgain)) throw new Error("bad-answer");
       const todaysRows = fakeDatabase.mission_completions.filter(row => row.child_id === childId && row.completed_on === today);
       const already = todaysRows.find(row => row.mission_id === missionId);
       if (already) return { xpAwarded: already.xp_awarded, brainBoost: 0, alreadySaved: true };
@@ -813,11 +835,12 @@ const dataLayer = {
       if (usedThinkAgain && todaysRows.filter(row => row.used_think_again).length >= (powers["think-again"] || 0)) throw new Error("no-power");
       const brainBoost = isRightAnswer(mission, choiceIndex) ? (powers["brain-boost"] || 0) : 0;
       const xpAwarded = xpForAnswer(mission, choiceIndex, brainBoost);
-      fakeDatabase.mission_completions.push({ child_id: childId, mission_id: missionId, completed_on: today, choice_index: choiceIndex, xp_awarded: xpAwarded, used_hint: usedHint, used_think_again: usedThinkAgain });
+      fakeDatabase.mission_completions.push({ child_id: childId, mission_id: missionId, completed_on: today, choice_index: choiceIndex, xp_awarded: xpAwarded, used_hint: usedHint, used_think_again: usedThinkAgain, did_it: isChallenge(mission) });
       return { xpAwarded, brainBoost };
     });
   },
-  /** { levelPoints (the playing buddy's), buddyLevelPoints:{ buddyId: points }, highestLevelReached (ever, any buddy; stored on the profile), xpEarned, xpSpentOnItems, xpSpentInShop, daysPlayedTotal, daysPlayedDates, missionsDoneToday:[{ missionId, xpAwarded }] }
+  /** { levelPoints (the playing buddy's), buddyLevelPoints:{ buddyId: points }, highestLevelReached (ever, any buddy; stored on the profile), xpEarned, xpSpentOnItems, xpSpentInShop, daysPlayedTotal, daysPlayedDates, missionsDoneToday:[{ missionId, xpAwarded }],
+      missionsLastDoneOn:{ missionId: date last done BEFORE today } (for picking missions that haven't been done) }
       Level points = set tasks + own tasks + scheduled task occurrences ticked while that buddy was playing (missions don't count).
       xpEarned = total xp_awarded from missions. xpSpentOnItems = total of item_xp. xpSpentInShop = total price_paid.
       XP to spend = xpEarned - xpSpentOnItems - xpSpentInShop.
@@ -851,7 +874,8 @@ const dataLayer = {
     });
   },
   /** Everything for one child's tab: { child, settings:{ timedMissions, resetStreakOnMiss, chanceFeatures, childCanChangeSettings },
-      tasks:[{ id, title, daysOfWeek, timesPerDay, setBy }], stats } (stats: see fakeChildStats). Throws Error("not-your-child"). */
+      tasks:[{ id, title, daysOfWeek, timesPerDay, setBy }], stats, login:{ username }, grownUps, birth:{ month, year } (nulls if not given) }
+      (stats: see fakeChildStats). Throws Error("not-your-child"). */
   async loadChildOverview(childId) {
     return fakeRequest(false, () => {
       requireMyChild(childId);
@@ -866,8 +890,17 @@ const dataLayer = {
         tasks: [...setTasks, ...scheduled],
         stats: fakeChildStats(childId),
         login: { username: (fakeDatabase.users.find(user => user.id === childId) || {}).username || "" },
-        grownUps: fakeDatabase.family_links.filter(row => row.child_id === childId).map(row => fakeDatabase.profiles[row.parent_id].display_name)
+        grownUps: fakeDatabase.family_links.filter(row => row.child_id === childId).map(row => fakeDatabase.profiles[row.parent_id].display_name),
+        birth: { month: profile.birth_month || null, year: profile.birth_year || null }
       };
+    });
+  },
+  /** A grown-up changes their child's birth month and year (the child can't). Throws Error("bad-birth-month"). */
+  async setChildBirthMonth(childId, { birthMonth, birthYear }) {
+    return fakeRequest(true, () => {
+      requireMyChild(childId);
+      checkBirthMonth(birthMonth, birthYear);
+      Object.assign(fakeDatabase.profiles[childId], { birth_month: birthMonth, birth_year: birthYear });
     });
   },
   /** task = { title, daysOfWeek, timesPerDay }. Same limits as addMyScheduledTask. Returns the saved task. */
@@ -891,22 +924,26 @@ const dataLayer = {
         chance_features: settings.chanceFeatures, child_can_change_settings: settings.childCanChangeSettings });
     });
   },
-  /** Adds a child to this grown-up's family: { displayName, username, passcode }. Returns the child (as in loadMyChildren).
-      The child logs in with the username and passcode, then picks their buddy. Throws Error("needs-name"),
-      Error("bad-username") (3–20 letters, numbers or - _), Error("username-taken"), Error("too-short") or Error("limit").
+  /** Adds a child to this grown-up's family: { birthMonth (1–12), birthYear, username, passcode }. Returns the child (as in loadMyChildren).
+      No real name is taken: display_name starts empty (the child is shown by their username) until the child makes up
+      a game name at setup. The birth month and year are used only to pick missions for the child's age; timed missions
+      start off for a child under TIMED_MISSIONS_FROM_AGE. The child logs in with the username and passcode, then picks their
+      buddy. Throws Error("bad-birth-month") (child must be MIN_CHILD_AGE to MAX_CHILD_AGE), Error("bad-username")
+      (3–20 letters, numbers or - _), Error("username-taken"), Error("too-short") or Error("limit").
       Supabase: a function with the service role creates the auth user (hidden email, see the notes at the top). */
-  async addChild({ displayName, username, passcode }) {
+  async addChild({ birthMonth, birthYear, username, passcode }) {
     return fakeRequest(true, () => {
-      const parentId = requireParentUserId(), name = displayName.trim(), cleanUsername = username.trim().toLowerCase();
-      if (!name || name.length > MAX_NAME_LENGTH) throw new Error("needs-name");
+      const parentId = requireParentUserId(), cleanUsername = username.trim().toLowerCase();
+      const age = checkBirthMonth(birthMonth, birthYear);
       if (!/^[a-z0-9_-]{3,20}$/.test(cleanUsername)) throw new Error("bad-username");
       if (fakeDatabase.users.some(user => user.username === cleanUsername)) throw new Error("username-taken");
       if (passcode.length < MIN_PASSCODE_LENGTH) throw new Error("too-short");
       if (fakeDatabase.family_links.filter(row => row.parent_id === parentId).length >= MAX_CHILDREN_PER_GROWN_UP) throw new Error("limit");
       const childId = `child-${Date.now()}`;
       fakeDatabase.users.push({ id: childId, username: cleanUsername, passcode });
-      fakeDatabase.profiles[childId] = { id: childId, role: "child", chance_features: true, display_name: name, theme_colour: "green", location: "home", active_buddy_id: null,
-        equipped_items: [], timed_missions: true, reset_streak_on_miss: true, setup_complete: false };
+      fakeDatabase.profiles[childId] = { id: childId, role: "child", chance_features: true, display_name: "", theme_colour: "green", location: "home", active_buddy_id: null,
+        birth_month: birthMonth, birth_year: birthYear,
+        equipped_items: [], timed_missions: age >= TIMED_MISSIONS_FROM_AGE, reset_streak_on_miss: true, setup_complete: false };
       fakeDatabase.family_links.push({ parent_id: parentId, child_id: childId, linked_on: getTodayInUk() });
       return fakeChildForParent(childId);
     });

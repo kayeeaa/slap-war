@@ -65,14 +65,24 @@ function addPetType(petType) {
   PET_TYPES[petType.id] = petType;
   PET_ORDER.push(petType.id);
 }
-const MISSION_TYPES = ["trivia", "scenario", "puzzle"];
+/* "challenge" is a Feel good mission: a small real-life side quest, done on trust. No options, no right answer. */
+const MISSION_TYPES = ["trivia", "scenario", "puzzle", "challenge"];
+/* Every mission says which ages it suits (ages: [youngest, oldest], inclusive), within these. */
+const MISSION_MIN_AGE = 5, MISSION_MAX_AGE = 13;
 function addMission(mission) {
   const problems = [];
-  ["id", "type", "difficulty", "question", "options"].forEach(field => { if (mission[field] === undefined || mission[field] === "") problems.push(`needs ${field}`); });
+  const isChallenge = mission.type === "challenge";
+  ["id", "type", "difficulty", "question", ...(isChallenge ? ["doneMessage"] : ["options"])].forEach(field => { if (mission[field] === undefined || mission[field] === "") problems.push(`needs ${field}`); });
   if (MISSIONS.some(existing => existing.id === mission.id)) problems.push(`the id "${mission.id}" is already used by another mission`);
   if (mission.type && !MISSION_TYPES.includes(mission.type)) problems.push(`type must be one of ${MISSION_TYPES.join(", ")}`);
-  if (mission.difficulty !== undefined && !(mission.difficulty >= 1 && mission.difficulty <= 5)) problems.push("difficulty must be 1 to 5 (it's the XP for getting it right)");
-  if (mission.type === "scenario") {
+  if (!Array.isArray(mission.ages) || mission.ages.length !== 2 || !mission.ages.every(Number.isInteger)
+      || mission.ages[0] > mission.ages[1] || mission.ages[0] < MISSION_MIN_AGE || mission.ages[1] > MISSION_MAX_AGE)
+    problems.push(`needs ages: [youngest, oldest] (whole numbers from ${MISSION_MIN_AGE} to ${MISSION_MAX_AGE})`);
+  const maxDifficulty = isChallenge ? 3 : 5;
+  if (mission.difficulty !== undefined && !(mission.difficulty >= 1 && mission.difficulty <= maxDifficulty)) problems.push(`difficulty must be 1 to ${maxDifficulty} (it's the XP for getting it right)`);
+  if (isChallenge) {
+    if (mission.options !== undefined || mission.correctIndex !== undefined) problems.push("Feel good (challenge) missions have no options or correctIndex");
+  } else if (mission.type === "scenario") {
     if (!mission.wordsToSay) problems.push("scenario missions need wordsToSay");
     if (mission.options && !mission.options.some(option => option.isGoodChoice)) problems.push("at least one option needs isGoodChoice: true");
   } else if (mission.type && (mission.correctIndex === undefined || !mission.options || !mission.options[mission.correctIndex])) {

@@ -115,7 +115,9 @@ The prototype is one file with clearly labelled sections. Its comments carry the
   - the tables
   - the rules that must run on the server: chance rolls, powers, Shop prices, daily limits, parent ↔ child links and child-only functions
   - the "New passcode" page that the passcode reset email needs
-- **Accounts are grown-up first.** Only grown-ups sign up (email and password). They add each child with a name, username and passcode, so no child email or age is collected and every child account has a grown-up's agreement from the start.
+- **Accounts are grown-up first.** Only grown-ups sign up (email and password). They add each child with a username, passcode and birth month and year, so every child account has a grown-up's agreement from the start.
+  - **No child's real name, email, full date of birth or gender is ever collected.** The only things held about a child are their username and birth month and year. The grown-up is told not to use the child's real name as the username. At first setup the child makes up a game name (`display_name`, told not to use their real name); until then they're shown by their username.
+  - **Why the birth month and year are collected:** only to work out the child's age each day, so they get missions that suit their age. Gender isn't collected: every mission is for every child of the right age. The grown-up can change the birth month and year on the child's tab; the child can't. Record this purpose wherever personal data is documented (privacy notice, data protection records) when the app moves to Supabase.
   - Child logins need Supabase auth users with hidden emails, created by a function using the service role. The data layer notes explain how, including the username lookup at log-in.
   - A child who forgets their passcode asks their grown-up, who sets a new one on the child's tab.
   - A second grown-up joins with an invite code from the first one.
@@ -127,4 +129,4 @@ The prototype is one file with clearly labelled sections. Its comments carry the
   - `prototypeSettings`
 - **Install the app:** a real install needs a web app manifest, icons and a service worker (see the comment in the install section).
 - **Sign-up switch:** `SIGN_UP_OPEN` turns sign-up on or off ("Coming soon"); anyone with an account can still log in.
-- **Missions:** content comes next. `content/missions/` uses the same one-file-per-mission pattern (see `addMission` in the prototype).
+- **Missions:** 468 missions are in `content/missions/`, picked by the child's age. See [MISSIONS-README.md](MISSIONS-README.md) for how they work and [MISSIONS-LIST.md](MISSIONS-LIST.md) for the full list.

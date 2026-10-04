@@ -1,1 +1,11 @@
-export default { type:"puzzle", id:"puzzle-block-stacks", difficulty:3, kind:"Puzzle", question:"You have 3 stacks of 4 blocks. You take 2 blocks off one stack. How many blocks are left?", options:["8","10","12"], correctIndex:1, explanation:"3 × 4 = 12 blocks, minus 2 = 10." };
+export default {
+  type: "puzzle",
+  id: "puzzle-block-stacks",
+  kind: "Puzzle",
+  ages: [8, 10],
+  difficulty: 3,
+  question: "You have 3 stacks of 4 blocks. You take 2 blocks off one stack. How many blocks are left?",
+  options: ["8", "10", "12"],
+  correctIndex: 1,
+  explanation: "3 × 4 = 12 blocks, minus 2 = 10."
+};

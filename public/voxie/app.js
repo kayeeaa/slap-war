@@ -395,7 +395,7 @@ async function confirmSetup() {
 element("setupLookConfirm").onclick = confirmSetup;
 
 /* A grown-up may change the child's settings at any time: pick up the latest when the game loads and on every tab. */
-const GROWN_UP_SETTING_FIELDS = ["timed_missions", "reset_streak_on_miss", "chance_features", "child_can_change_settings", "grown_up_names"];
+const GROWN_UP_SETTING_FIELDS = ["timed_missions", "reset_streak_on_miss", "chance_features", "child_can_change_settings", "grown_up_names", "birth_month", "birth_year"];
 function takeGrownUpSettings(fresh) {
   if (!fresh || !currentProfile || fresh.id !== currentProfile.id) return;
   currentProfile = { ...currentProfile, ...Object.fromEntries(GROWN_UP_SETTING_FIELDS.map(field => [field, fresh[field]])) };
@@ -780,7 +780,9 @@ const hintsLeftToday = () => powerValue("hint") - (currentProgress.hintsUsedToda
 const thinkAgainsLeftToday = () => powerValue("think-again") - (currentProgress.thinkAgainsUsedToday || 0) - Object.values(missionHelp).filter(help => help.usedThinkAgain).length;
 function renderMissions() {
   stopMissionTimer();
-  const area = element("missionArea"), missions = pickTodaysMissions(currentProfile.id, powerValue("bonus-mission"));
+  const area = element("missionArea"), missions = pickTodaysMissions(currentProfile.id, {
+    age: ageFromBirthMonth(currentProfile.birth_month, currentProfile.birth_year),
+    lastDoneOn: currentProgress.missionsLastDoneOn || {}, bonusMissions: powerValue("bonus-mission") });
   const doneCount = currentProgress.missionsDoneToday.length, brainBoost = powerValue("brain-boost");
   area.innerHTML = `<h2>Today's missions</h2>
     <p class="hint">${doneCount} of ${missions.length} done. Harder missions are worth more XP if you get them right, and you always get +${XP_FOR_TRYING} for trying.${currentProfile.timed_missions ? " Timed missions are switched on." : " No rush. Take as long as you like."}</p>
@@ -789,14 +791,29 @@ function renderMissions() {
       return `<div class="mission${done ? " completed" : ""}" data-mission="${mission.id}">
         <div class="mission-head">
           <div class="left"><span class="mtype">${mission.isBonus ? "✨ Bonus · " : ""}${mission.kind}</span>${difficultyPips(mission.difficulty)}</div>
-          <span class="xp-tag">${done ? `✓ +${doneRecord.xpAwarded} XP` : `Up to +${mission.difficulty + brainBoost} XP`}</span>
+          <span class="xp-tag">${done ? `✓ +${doneRecord.xpAwarded} XP` : isChallenge(mission) ? `+${mission.difficulty} XP` : `Up to +${mission.difficulty + brainBoost} XP`}</span>
         </div>
-        ${done ? `<p class="hint">${doneRecord.xpAwarded > XP_FOR_TRYING ? "Done. Nice work!" : "Done. Thanks for having a go!"}</p>` : isOpen ? missionBodyHtml(mission) : `<button type="button" class="btn small" data-start-mission="${mission.id}">${currentProfile.timed_missions ? "Start the clock" : "Start"}</button>`}
+        ${done ? `<p class="hint">${isChallenge(mission) ? escapeHtml(mission.doneMessage) : doneRecord.xpAwarded > XP_FOR_TRYING ? "Done. Nice work!" : "Done. Thanks for having a go!"}</p>`
+          : isOpen ? (isChallenge(mission) ? challengeBodyHtml(mission) : missionBodyHtml(mission))
+          : `<button type="button" class="btn small" data-start-mission="${mission.id}">${currentProfile.timed_missions && !isChallenge(mission) ? "Start the clock" : "Start"}</button>`}
       </div>`;
     }).join("")}</div>`;
   area.querySelectorAll("[data-start-mission]").forEach(button => button.onclick = () => { openMissionId = button.dataset.startMission; renderMissions(); });
   const openMission = missions.find(mission => mission.id === openMissionId);
-  if (openMission && !currentProgress.missionsDoneToday.some(record => record.missionId === openMission.id)) wireMissionChoices(openMission);
+  if (openMission && !currentProgress.missionsDoneToday.some(record => record.missionId === openMission.id)) {
+    if (isChallenge(openMission)) wireChallenge(openMission); else wireMissionChoices(openMission);
+  }
+}
+/* Feel good: a small real-life side quest, done on trust. No timer, no right answer, and Hint / Think again don't apply. */
+function challengeBodyHtml(mission) {
+  return `<p class="q">${escapeHtml(mission.question)}</p>${mission.tip ? `<p class="hint">${escapeHtml(mission.tip)}</p>` : ""}
+    <div class="btnrow"><button type="button" class="btn" data-collect>I did it!</button><button type="button" class="btn ghost" data-not-now>Not right now</button></div>`;
+}
+function wireChallenge(mission) {
+  const card = element("missionArea").querySelector(`[data-mission="${mission.id}"]`);
+  card.querySelector("[data-collect]").onclick = () => collectMissionXp(mission, null);
+  // It stays on today's list, so they can come back to it later in the day.
+  card.querySelector("[data-not-now]").onclick = () => { openMissionId = null; renderMissions(); };
 }
 function missionBodyHtml(mission) {
   const isScenario = !!mission.wordsToSay;
@@ -893,7 +910,7 @@ async function collectMissionXp(mission, choiceIndex) {
   button.disabled = true;
   try {
     const help = helpFor(mission.id);
-    const { xpAwarded: xpEarned } = await dataLayer.saveMissionCompletion(mission.id, choiceIndex, { usedHint: help.usedHint, usedThinkAgain: help.usedThinkAgain });
+    const { xpAwarded: xpEarned } = await dataLayer.saveMissionCompletion(mission.id, choiceIndex, { usedHint: help.usedHint, usedThinkAgain: help.usedThinkAgain, didIt: isChallenge(mission) });
     const today = getTodayInUk();
     if (currentProgress.missionsDoneToday.some(record => record.missionId === mission.id)) { openMissionId = null; renderMissions(); return; } // already counted
     if (help.usedHint) currentProgress.hintsUsedToday = (currentProgress.hintsUsedToday || 0) + 1;
@@ -915,6 +932,13 @@ async function collectMissionXp(mission, choiceIndex) {
       return;
     }
     if (error.message === "daily-limit") { showSaveError("That's all your missions for today. More tomorrow!", null); openMissionId = null; renderMissions(); return; }
+    if (error.message === "not-for-age") {
+      // Their grown-up has changed their birth month: pick up the new age and today's missions with it.
+      showSaveError("Your missions have changed. Pick one from the new list.", null);
+      openMissionId = null;
+      dataLayer.getSignedInProfile().then(fresh => { takeGrownUpSettings(fresh); renderMissions(); }).catch(() => renderMissions());
+      return;
+    }
     showSaveError("Couldn't save your mission. Check your internet and try again.", () => collectMissionXp(mission, choiceIndex));
   }
 }
@@ -2205,7 +2229,7 @@ async function openParentTab(tabId) {
   element("parentLoading").innerHTML = "";
   parentTaskDraft = { daysOfWeek: [], timesPerDay: 1 };
   element("parentTaskTitle").value = "";
-  ["parentTaskError", "parentSettingsError", "parentUnlinkError", "parentPasscodeError", "parentPasscodeDone", "parentInviteError"].forEach(id => element(id).textContent = "");
+  ["parentTaskError", "parentSettingsError", "parentUnlinkError", "parentPasscodeError", "parentPasscodeDone", "parentInviteError", "parentBirthError", "parentBirthDone"].forEach(id => element(id).textContent = "");
   element("parentNewPasscode").value = "";
   element("parentInviteCode").hidden = element("parentInviteHint").hidden = true;
   renderParentChild();
@@ -2239,9 +2263,10 @@ function renderParentChild() {
   element("parentStatMissions").textContent = stats.missionsDoneThisWeek;
   element("parentStatMissionsHint").textContent = stats.missionsDoneThisWeek > stats.missionsPossibleThisWeek
     ? `${MAX_MISSIONS_PER_DAY} a day, plus bonus missions` : `of ${stats.missionsPossibleThisWeek} (${MAX_MISSIONS_PER_DAY} a day)`;
+  element("parentStatMissionsHint").textContent += `, including ${stats.feelGoodDoneThisWeek} Feel good`;
   const rightPercent = percentOf(stats.questionsRight, stats.questionsAnswered);
   element("parentStatRight").textContent = rightPercent === null ? "–" : `${rightPercent}%`;
-  element("parentStatRightHint").textContent = stats.questionsAnswered ? `${stats.questionsRight} of ${stats.questionsAnswered} answers, all time` : "No missions answered yet";
+  element("parentStatRightHint").textContent = stats.questionsAnswered ? `${stats.questionsRight} of ${stats.questionsAnswered} quiz and "What would you do?" answers, all time` : "No questions answered yet";
 
   const dayLabel = weekDay => WEEK_DAYS.find(day => day.id === weekDay).label;
   element("parentWeekStrip").innerHTML = stats.lastSevenDays.map((day, index) => {
@@ -2254,6 +2279,7 @@ function renderParentChild() {
   renderParentTasks();
   renderParentSettings();
   renderParentLogin();
+  renderParentBirth();
   renderParentGrownUps();
 }
 function renderParentTasks() {
@@ -2387,6 +2413,34 @@ element("parentPasscodeForm").onsubmit = async event => {
   }
   element("parentPasscodeButton").disabled = false;
 };
+/* Age: the birth month and year missions are picked by. Only a grown-up can change it. */
+function renderParentBirth() {
+  const { child, birth } = parentOverview, age = ageFromBirthMonth(birth.month, birth.year);
+  fillBirthSelects("parentBirthMonth", "parentBirthYear", birth.month, birth.year);
+  element("parentBirthHint").textContent = age === null
+    ? `Not given yet, so ${child.displayName} gets missions for ages ${DEFAULT_MISSION_AGES[0]} to ${DEFAULT_MISSION_AGES[1]}. Only you can change this.`
+    : `${child.displayName} is ${age}, so gets missions for ${age} year olds. Only you can change this.`;
+}
+element("parentBirthForm").onsubmit = async event => {
+  event.preventDefault();
+  const childId = parentOpenChildId, birth = readBirthSelects("parentBirthMonth", "parentBirthYear");
+  element("parentBirthError").textContent = birth.error; element("parentBirthDone").textContent = "";
+  if (birth.error) return;
+  element("parentBirthButton").disabled = true;
+  try {
+    await dataLayer.setChildBirthMonth(childId, { birthMonth: birth.birthMonth, birthYear: birth.birthYear });
+    if (parentOpenChildId === childId) {
+      parentOverview.birth = { month: birth.birthMonth, year: birth.birthYear };
+      renderParentBirth();
+      element("parentBirthDone").textContent = "Saved.";
+    }
+  } catch (error) {
+    if (!handledNoLongerLinked(error, childId) && parentOpenChildId === childId)
+      element("parentBirthError").textContent = error.message === "bad-birth-month"
+        ? `Voxie is for children aged ${MIN_CHILD_AGE} to ${MAX_CHILD_AGE}. Check the month and year.` : "Couldn't save it. Check your internet and try again.";
+  }
+  element("parentBirthButton").disabled = false;
+};
 /* Grown-ups: who looks after this child, inviting another one, and removing yourself or deleting the account. */
 function renderParentGrownUps() {
   const { child, grownUps } = parentOverview, name = escapeHtml(child.displayName), soleGrownUp = grownUps.length < 2;
@@ -2439,30 +2493,41 @@ async function removeOpenChild(deleteAccount) {
   }
 }
 /* "+ Add a child": make the child's login, then show it so the grown-up can write it down. */
+/* Birth month and year dropdowns ("+ Add a child" and the child's tab). Years run from MIN_CHILD_AGE to MAX_CHILD_AGE years ago. */
+function fillBirthSelects(monthId, yearId, month = null, year = null) {
+  const thisYear = Number(getTodayInUk().slice(0, 4));
+  const years = Array.from({ length: MAX_CHILD_AGE - MIN_CHILD_AGE + 2 }, (_, index) => thisYear - MIN_CHILD_AGE - index);
+  if (year && !years.includes(year)) years.push(year);   // a saved year that's now out of range still shows
+  element(monthId).innerHTML = `<option value="">Month</option>` + MONTH_NAMES.map((name, index) => `<option value="${index + 1}"${month === index + 1 ? " selected" : ""}>${name}</option>`).join("");
+  element(yearId).innerHTML = `<option value="">Year</option>` + years.map(option => `<option value="${option}"${year === option ? " selected" : ""}>${option}</option>`).join("");
+}
+/* { birthMonth, birthYear, error } from a pair of dropdowns, checking the child is MIN_CHILD_AGE to MAX_CHILD_AGE. */
+function readBirthSelects(monthId, yearId) {
+  const birthMonth = Number(element(monthId).value), birthYear = Number(element(yearId).value);
+  if (!birthMonth || !birthYear) return { error: "Pick the month and year they were born." };
+  const age = ageFromBirthMonth(birthMonth, birthYear);
+  if (age < MIN_CHILD_AGE || age > MAX_CHILD_AGE) return { error: `Voxie is for children aged ${MIN_CHILD_AGE} to ${MAX_CHILD_AGE}. Check the month and year.` };
+  return { birthMonth, birthYear, error: "" };
+}
 function resetAddChildForm() {
-  ["parentAddName", "parentAddUsername", "parentAddPasscode", "parentLinkCode"].forEach(id => element(id).value = "");
+  ["parentAddUsername", "parentAddPasscode", "parentLinkCode"].forEach(id => element(id).value = "");
   ["parentAddError", "parentLinkError"].forEach(id => element(id).textContent = "");
+  fillBirthSelects("parentAddBirthMonth", "parentAddBirthYear");
   element("parentAddPasscodeHint").textContent = `At least ${MIN_PASSCODE_LENGTH} characters. Pick something they'll remember but others won't guess.`;
   element("parentAddForm").hidden = false; element("parentAddDone").hidden = true;
-  element("parentAddUsername").dataset.edited = "";
 }
-// Suggest a username from their name until the grown-up types their own.
-element("parentAddName").oninput = () => {
-  if (element("parentAddUsername").dataset.edited) return;
-  element("parentAddUsername").value = element("parentAddName").value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20);
-};
-element("parentAddUsername").oninput = () => { element("parentAddUsername").dataset.edited = "yes"; };
+/* No real name is asked for: the child is shown by their username until they make up a game name at setup. */
 element("parentAddForm").onsubmit = async event => {
   event.preventDefault();
-  const displayName = element("parentAddName").value, username = element("parentAddUsername").value, passcode = element("parentAddPasscode").value;
+  const username = element("parentAddUsername").value, passcode = element("parentAddPasscode").value;
   const say = message => { element("parentAddError").textContent = message; };
-  const nameCheck = validateName(displayName);
-  if (nameCheck.error) return say(nameCheck.error);
   if (!/^[a-z0-9_-]{3,20}$/.test(username.trim().toLowerCase())) return say("Usernames are 3 to 20 letters or numbers, with no spaces (a dash is fine).");
+  const birth = readBirthSelects("parentAddBirthMonth", "parentAddBirthYear");
+  if (birth.error) return say(birth.error);
   if (passcode.length < MIN_PASSCODE_LENGTH) return say(`Make the passcode at least ${MIN_PASSCODE_LENGTH} characters.`);
   element("parentAddButton").disabled = true; say("");
   try {
-    const child = await dataLayer.addChild({ displayName: nameCheck.name, username, passcode });
+    const child = await dataLayer.addChild({ birthMonth: birth.birthMonth, birthYear: birth.birthYear, username, passcode });
     parentChildren = [...parentChildren, child];
     renderParentTabs();
     element("parentAddForm").hidden = true; element("parentAddDone").hidden = false;
@@ -2472,7 +2537,7 @@ element("parentAddForm").onsubmit = async event => {
     element("parentAddDoneOpen").textContent = `Go to ${child.displayName}'s tab`;
     element("parentAddDoneOpen").onclick = () => openParentTab(child.id);
   } catch (error) {
-    const messages = { "needs-name": "Type their name (up to 16 letters or numbers).",
+    const messages = { "bad-birth-month": `Voxie is for children aged ${MIN_CHILD_AGE} to ${MAX_CHILD_AGE}. Check the month and year.`,
       "bad-username": "Usernames are 3 to 20 letters or numbers, with no spaces (a dash is fine).",
       "username-taken": "Someone already has that username. Try adding a number or a word, like sky-77.",
       "too-short": `Make the passcode at least ${MIN_PASSCODE_LENGTH} characters.`,
