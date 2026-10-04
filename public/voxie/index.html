@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxie</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+  <link rel="stylesheet" href="/voxie/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ===================== LOADING ===================== -->
+    <section class="screen" id="screenLoading">
+      <div class="loading">
+        <div>
+          <div class="logo-text-lockup"><p class="text-logo">Voxie</p><p class="logo-byline">by House of Kay</p></div>
+          <div class="loading-buddy" role="status"><canvas class="loading-buddy-pet" id="loadingScreenBuddy" width="112" height="112" aria-hidden="true"></canvas><span>Loading…</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== LOG IN ===================== -->
+    <section class="screen home-page" id="screenLogin" hidden>
+      <!-- HOMEPAGE: this is voxie's front page on the web, with the log-in on it -->
+      <header class="site-top">
+        <p class="logo-text-lockup"><span class="text-logo">Voxie</span><span class="logo-byline">by House of Kay</span></p>
+        <nav class="site-nav" aria-label="Voxie">
+          <button type="button" class="btn small ghost" data-open-parents>Parents and carers</button>
+          <button type="button" class="btn small" data-open-login>Log in</button>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero-text">
+          <h1>Level up your buddy.<br><span class="accent-text">Level up you.</span></h1>
+          <p class="hero-lead">Tick off your jobs, smash your daily missions and grow a pixel buddy that's all yours. Unlock gear, open mystery boxes, find super-rare loot and collect every buddy in the game.</p>
+          <div class="btnrow hero-buttons">
+            <button type="button" class="btn" data-open-login>Log in and play</button>
+            <button type="button" class="btn ghost" data-scroll-to="signUpSection">Grown-ups: get started</button>
+          </div>
+        </div>
+        <div class="login-scene" id="loginScene" aria-hidden="true"><canvas class="stage-bg"></canvas><div class="login-buddies" id="loginBuddies"></div></div>
+      </section>
+
+      <section class="how-it-works" aria-labelledby="howHeading">
+        <h2 id="howHeading">How it works</h2>
+        <div class="how-grid">
+          <div class="how-card"><span class="how-number">1</span><h3>Do your jobs</h3><p>Every job you tick off feeds your buddy and levels it up. Bigger level, bigger buddy.</p></div>
+          <div class="how-card"><span class="how-number">2</span><h3>Crush missions</h3><p>Three quick missions a day: brain teasers, puzzles and "What would you do?". Win XP to spend.</p></div>
+          <div class="how-card"><span class="how-number">3</span><h3>Collect the lot</h3><p>Weapons, hats, pets, mystery boxes and insanely rare loot. Hit level 100 and rebirth as a brand new buddy.</p></div>
+        </div>
+      </section>
+
+      <!-- GET STARTED: a grown-up signs up, then adds each child (username + passcode). Kids don't sign up themselves. -->
+      <section class="sign-up" id="signUpSection" aria-labelledby="signUpHeading">
+        <h2 id="signUpHeading">Get started</h2>
+        <div class="sign-up-grid">
+          <div class="how-card sign-up-card">
+            <h3>I'm a grown-up</h3>
+            <p>Make your account, then add each of your kids with their own username and passcode. You set their jobs, pick their settings and see how they're getting on.</p>
+            <button type="button" class="btn" id="openParentSignUpButton">Make a grown-up account</button>
+          </div>
+          <div class="how-card sign-up-card">
+            <h3>I'm a kid</h3>
+            <p>Ask your grown-up to set you up. Got your username and passcode? Then you're ready to play.</p>
+            <button type="button" class="btn ghost" data-open-login>Log in</button>
+          </div>
+        </div>
+        <form class="block login-card" id="parentSignUpForm" novalidate hidden>
+          <h2>Make a grown-up account</h2>
+          <div class="field">
+            <label class="label" for="parentSignUpName">Your name</label>
+            <input type="text" id="parentSignUpName" maxlength="30" autocomplete="name">
+            <span class="hint">Your kids will see this, e.g. "Mum" or "Alex".</span>
+          </div>
+          <div class="field">
+            <label class="label" for="parentSignUpEmail">Your email</label>
+            <input type="email" id="parentSignUpEmail" autocomplete="username" inputmode="email">
+          </div>
+          <div class="field">
+            <label class="label" for="parentSignUpPassword">Make a password</label>
+            <input type="password" id="parentSignUpPassword" autocomplete="new-password">
+          </div>
+          <div class="field">
+            <label class="label" for="parentSignUpPasswordAgain">Type it again</label>
+            <input type="password" id="parentSignUpPasswordAgain" autocomplete="new-password">
+          </div>
+          <p class="hint" id="parentSignUpPasswordRule"></p>
+          <p class="error" id="parentSignUpError" role="alert"></p>
+          <div class="btnrow">
+            <button class="btn" type="submit" id="parentSignUpButton">Make my account</button>
+            <button class="btn ghost" type="button" id="parentSignUpCancel">Back</button>
+          </div>
+          <p class="hint">Next you'll add your kids and make their logins. Kids never need an email address.</p>
+        </form>
+      </section>
+
+      <footer class="site-footer"><span class="text-logo small">Voxie</span><span>Made by House of Kay</span></footer>
+
+      <div class="demo">
+        <strong>Prototype only: test accounts</strong>
+        <div class="demo-row"><span>Charlie: added by Sam, not set up yet (sees setup)<br>newplayer · blocks1</span><button class="btn small ghost" type="button" data-demo="1">Use</button></div>
+        <div class="demo-row"><span>Sky: lots of XP, 1 task from level 6, friend request waiting<br>sky · blocks2</span><button class="btn small ghost" type="button" data-demo="2">Use</button></div>
+        <div class="demo-row"><span>Jamie: friend request waiting<br>jamie · blocks4</span><button class="btn small ghost" type="button" data-demo="4">Use</button></div>
+        <div class="demo-row"><span>Max: friend request waiting<br>max · blocks5</span><button class="btn small ghost" type="button" data-demo="5">Use</button></div>
+        <div class="demo-row"><span>Robin: an angel buddy, friend request waiting<br>robin · blocks3</span><button class="btn small ghost" type="button" data-demo="3">Use</button></div>
+        <div class="demo-row"><span>Alex: a grown-up, looks after Sky and Robin<br>grown.up@example.com · parent1</span><button class="btn small ghost" type="button" data-demo="6">Use</button></div>
+        <div class="demo-row"><span>Sam: a grown-up, looks after Jamie, Max and Charlie<br>sam@example.com · parent2</span><button class="btn small ghost" type="button" data-demo="7">Use</button></div>
+      </div>
+    </section>
+
+    <!-- ===================== PARENTS AND CARERS (its own page; in the real site: /parents-and-carers) ===================== -->
+    <section class="screen home-page" id="screenParents" hidden>
+      <header class="site-top">
+        <p class="logo-text-lockup"><span class="text-logo">Voxie</span><span class="logo-byline">by House of Kay</span></p>
+        <nav class="site-nav" aria-label="Voxie">
+          <button type="button" class="btn small ghost" id="parentsBackButton">← Home</button>
+          <button type="button" class="btn small" data-open-login>Log in</button>
+        </nav>
+      </header>
+      <section class="block parents" id="parentsSection" aria-labelledby="parentsHeading">
+        <h1 id="parentsHeading">Parents and carers</h1>
+        <p>Voxie turns everyday jobs into a game children actually want to play. You set the jobs; they earn levels by doing them, and they look after a pixel buddy along the way.</p>
+        <h3>Why the missions matter</h3>
+        <p>Alongside puzzles and brain teasers, each day includes a <strong>"What would you do?"</strong> mission. These are real situations from the playground, group chats and online games, written to help children think about how they treat other people, and how they treat girls in particular. They practise noticing when something isn't OK, working out what's right, and they get the actual words to speak up.</p>
+        <ul class="parents-list">
+          <li><strong>"Stop" means stop</strong>, even when someone's laughing.</li>
+          <li><strong>"Maybe" isn't a yes.</strong> Wait for a real yes.</li>
+          <li><strong>Don't join in</strong> when someone's being laughed at online.</li>
+          <li><strong>Back someone up</strong>, and tell a trusted adult.</li>
+        </ul>
+        <p>There's no telling-off for a wrong answer. Every answer earns a little XP for having a go, and the explanation shows why the other choice is better, plus the words to use next time.</p>
+        <h3>Safe by design</h3>
+        <ul class="parents-list">
+          <li><strong>No real money, ever.</strong> XP is the only currency, and it only comes from missions.</li>
+          <li><strong>No adverts.</strong></li>
+          <li><strong>Private.</strong> Friends only see each other's buddy, level and XP. No chat, no photos.</li>
+          <li><strong>You're in charge of the account.</strong> You make your child's login, so we never ask for their email or age.</li>
+          <li><strong>Mystery boxes and "Take a chance" can be switched off.</strong></li>
+          <li><strong>No timers if they don't suit your child.</strong> Timed missions can be turned off.</li>
+        </ul>
+        <h3>Your grown-up account</h3>
+        <ul class="parents-list">
+          <li><strong>A tab for each child.</strong> Add them with a username and passcode you choose, and reset it if they forget.</li>
+          <li><strong>Two grown-ups?</strong> Invite the other one with a code, so you can both look after your kids.</li>
+          <li><strong>Set their tasks</strong> on the days they happen, like homework on school days or feeding the cat every day.</li>
+          <li><strong>Choose their settings</strong> (timers, Mystery boxes, streaks) and decide whether they can change them themselves.</li>
+          <li><strong>See how they're doing:</strong> tasks done, missions done, and how many questions they get right.</li>
+        </ul>
+        <button type="button" class="btn" id="parentsPageSignUpButton">Get started: make a grown-up account</button>
+      </section>
+      <footer class="site-footer"><span class="text-logo small">Voxie</span><span>Made by House of Kay</span></footer>
+    </section>
+
+    <!-- ===================== PARENT ACCOUNT (grown-ups only: a tab per linked child) ===================== -->
+    <section class="screen parent-home" id="screenParentHome" hidden>
+      <header class="site-top">
+        <p class="logo-text-lockup"><span class="text-logo">Voxie</span><span class="logo-byline">for grown-ups</span></p>
+        <nav class="site-nav" aria-label="Your account">
+          <button type="button" class="btn small ghost" id="parentLogOutButton">Log out</button>
+        </nav>
+      </header>
+      <h1 id="parentGreeting">Hi</h1>
+      <div class="child-tabs" id="parentChildTabs" role="group" aria-label="Your children"></div>
+      <div id="parentLoading"></div>
+
+      <div class="screen" id="parentChildPanel" hidden>
+        <section class="block" aria-labelledby="parentStatsHeading">
+          <div class="parent-child-head">
+            <canvas id="parentChildBuddy" width="112" height="112" aria-hidden="true"></canvas>
+            <div class="text"><h2 id="parentStatsHeading"></h2><p class="hint" id="parentChildSummary"></p></div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-tile"><span class="label">Today's tasks</span><span class="big" id="parentStatToday"></span><span class="hint" id="parentStatTodayHint"></span></div>
+            <div class="stat-tile"><span class="label">Tasks, last 7 days</span><span class="big" id="parentStatTasks"></span><span class="hint" id="parentStatTasksHint"></span></div>
+            <div class="stat-tile"><span class="label">Missions, last 7 days</span><span class="big" id="parentStatMissions"></span><span class="hint" id="parentStatMissionsHint"></span></div>
+            <div class="stat-tile"><span class="label">Questions right</span><span class="big" id="parentStatRight"></span><span class="hint" id="parentStatRightHint"></span></div>
+          </div>
+          <span class="label" id="parentWeekLabel">Tasks done each day</span>
+          <div class="week-strip" id="parentWeekStrip" role="img" aria-labelledby="parentWeekLabel"></div>
+        </section>
+
+        <div class="parent-columns">
+          <section class="block scheduled" aria-labelledby="parentTasksHeading">
+            <h2 id="parentTasksHeading">Tasks</h2>
+            <p class="hint" id="parentTasksIntro"></p>
+            <ul class="schedule-list" id="parentTaskList"></ul>
+            <form class="schedule-form" id="parentTaskForm" novalidate>
+              <div class="field">
+                <label class="label" for="parentTaskTitle">What's the task?</label>
+                <input type="text" id="parentTaskTitle" maxlength="40" autocomplete="off" placeholder="e.g. Homework">
+              </div>
+              <span class="label" id="parentTaskDaysLabel">Which days?</span>
+              <div class="daypick" id="parentTaskDayPicker" role="group" aria-labelledby="parentTaskDaysLabel"></div>
+              <div class="quickdays">
+                <button type="button" class="btn small ghost" id="parentTaskEveryDay">Every day</button>
+                <button type="button" class="btn small ghost" id="parentTaskSchoolDays">School days</button>
+                <button type="button" class="btn small ghost" id="parentTaskWeekends">Weekends</button>
+              </div>
+              <span class="label" id="parentTaskTimesLabel">How many times a day?</span>
+              <div class="stepper" role="group" aria-labelledby="parentTaskTimesLabel">
+                <button type="button" id="parentTaskTimesDown" aria-label="Fewer times">−</button>
+                <output id="parentTaskTimesValue" aria-live="polite">1</output>
+                <button type="button" id="parentTaskTimesUp" aria-label="More times">+</button>
+              </div>
+              <p class="error" id="parentTaskError" role="alert"></p>
+              <button class="btn" type="submit" id="parentTaskAddButton">Add task</button>
+            </form>
+          </section>
+
+          <div class="parent-side">
+            <section class="block" aria-labelledby="parentSettingsHeading">
+              <h2 id="parentSettingsHeading">Settings</h2>
+              <div class="setting">
+                <div class="text"><strong><label for="parentSettingTimed">Timed missions</label></strong><span class="hint">A clock for reading each mission, then a few seconds to answer. Off means no clock at all.</span></div>
+                <input type="checkbox" class="switch" id="parentSettingTimed" role="switch">
+              </div>
+              <div class="setting">
+                <div class="text"><strong><label for="parentSettingChance">Mystery boxes and Take a chance</label></strong><span class="hint">Spend XP on a random item, or risk a new item for a rarer one. XP only, never real money. Off hides them.</span></div>
+                <input type="checkbox" class="switch" id="parentSettingChance" role="switch">
+              </div>
+              <div class="setting">
+                <div class="text"><strong><label for="parentSettingStreak">Reset streak if a day is missed</label></strong><span class="hint">Off: the streak counts every day they've played, so a missed day doesn't undo it.</span></div>
+                <input type="checkbox" class="switch" id="parentSettingStreak" role="switch">
+              </div>
+              <div class="setting">
+                <div class="text"><strong><label for="parentSettingChildCanChange" id="parentSettingChildCanChangeLabel">Let them change these</label></strong><span class="hint">Off: only you can change these three settings.</span></div>
+                <input type="checkbox" class="switch" id="parentSettingChildCanChange" role="switch">
+              </div>
+              <p class="error" id="parentSettingsError" role="alert"></p>
+            </section>
+            <section class="block" aria-labelledby="parentLoginHeading">
+              <h2 id="parentLoginHeading">Login</h2>
+              <p class="login-detail"><span class="label">Username</span> <strong id="parentChildUsername"></strong></p>
+              <form class="login-pop-form" id="parentPasscodeForm" novalidate>
+                <div class="field">
+                  <label class="label" for="parentNewPasscode" id="parentNewPasscodeLabel">New passcode</label>
+                  <input type="text" id="parentNewPasscode" autocomplete="off" autocapitalize="none" spellcheck="false">
+                  <span class="hint" id="parentNewPasscodeHint"></span>
+                </div>
+                <p class="error" id="parentPasscodeError" role="alert"></p>
+                <p class="hint" id="parentPasscodeDone" role="status"></p>
+                <button class="btn small" type="submit" id="parentPasscodeButton">Set new passcode</button>
+              </form>
+            </section>
+            <section class="block" aria-labelledby="parentGrownUpsHeading">
+              <h2 id="parentGrownUpsHeading">Grown-ups</h2>
+              <ul class="grown-up-list" id="parentGrownUpList"></ul>
+              <p class="hint" id="parentInviteText"></p>
+              <p class="link-code" id="parentInviteCode" hidden></p>
+              <p class="hint" id="parentInviteHint" hidden></p>
+              <button type="button" class="btn small ghost" id="parentInviteButton">Invite another grown-up</button>
+              <p class="error" id="parentInviteError" role="alert"></p>
+              <div class="danger-zone">
+                <p class="hint" id="parentUnlinkText"></p>
+                <div class="btnrow" id="parentUnlinkRow"></div>
+                <p class="error" id="parentUnlinkError" role="alert"></p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- "+ Add a child": make the child's login, then show it so the grown-up can write it down -->
+      <section class="block" id="parentAddPanel" hidden aria-labelledby="parentAddHeading">
+        <h2 id="parentAddHeading">Add a child</h2>
+        <form class="login-pop-form" id="parentAddForm" novalidate>
+          <div class="field">
+            <label class="label" for="parentAddName">Their name</label>
+            <input type="text" id="parentAddName" maxlength="16" autocomplete="off">
+            <span class="hint">What they're called in Voxie. They can change it when they set up.</span>
+          </div>
+          <div class="field">
+            <label class="label" for="parentAddUsername">Username</label>
+            <input type="text" id="parentAddUsername" maxlength="20" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <span class="hint">What they type to log in: 3 to 20 letters or numbers (a dash is fine). Avoid their full name.</span>
+          </div>
+          <div class="field">
+            <label class="label" for="parentAddPasscode">Passcode</label>
+            <input type="text" id="parentAddPasscode" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <span class="hint" id="parentAddPasscodeHint"></span>
+          </div>
+          <p class="error" id="parentAddError" role="alert"></p>
+          <button class="btn" type="submit" id="parentAddButton">Add child</button>
+        </form>
+        <div class="login-card-made" id="parentAddDone" hidden>
+          <p><strong id="parentAddDoneTitle"></strong></p>
+          <dl class="login-made-list">
+            <div><dt>Go to</dt><dd class="plain">Voxie homepage, then Log in</dd></div>
+            <div><dt>Username</dt><dd id="parentAddDoneUsername"></dd></div>
+            <div><dt>Passcode</dt><dd id="parentAddDonePasscode"></dd></div>
+          </dl>
+          <p class="hint">Write this down for them. You won't see the passcode again, but you can always set a new one on their tab.</p>
+          <div class="btnrow">
+            <button type="button" class="btn" id="parentAddDoneOpen"></button>
+            <button type="button" class="btn ghost" id="parentAddAnother">Add another child</button>
+          </div>
+        </div>
+        <details class="invite-join" id="parentLinkPanel">
+          <summary>Another grown-up already added your child?</summary>
+          <p class="hint">Ask them to open your child's tab in their Voxie account and tap <strong>Invite another grown-up</strong>. Type the code here. It works for 24 hours.</p>
+          <form class="login-pop-form" id="parentLinkForm" novalidate>
+            <div class="field">
+              <label class="label" for="parentLinkCode">Invite code</label>
+              <input type="text" id="parentLinkCode" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            </div>
+            <p class="error" id="parentLinkError" role="alert"></p>
+            <button class="btn ghost" type="submit" id="parentLinkButton">Join</button>
+          </form>
+        </details>
+      </section>
+      <footer class="site-footer"><span class="text-logo small">Voxie</span><span>Made by House of Kay</span></footer>
+    </section>
+
+    <!-- ===================== SETUP 1: YOUR NAME ===================== -->
+    <section class="screen" id="screenSetupName" hidden>
+      <div class="steps" aria-label="Step 1 of 3"><span class="on"></span><span></span><span></span></div>
+      <h1>What should we call you?</h1>
+      <form class="block" id="setupNameForm" novalidate>
+        <div class="field">
+          <label class="label" for="setupNameInput">Your name in the game</label>
+          <input type="text" id="setupNameInput" maxlength="16" autocomplete="off">
+        </div>
+        <p class="error" id="setupNameError" role="alert"></p>
+        <p class="hint">Up to 16 letters or numbers. You can change it any time.</p>
+        <button class="btn" type="submit">Next</button>
+      </form>
+    </section>
+
+    <!-- ===================== SETUP 2: PET + PET NAME ===================== -->
+    <section class="screen" id="screenSetupPet" hidden>
+      <div class="steps" aria-label="Step 2 of 3"><span class="on"></span><span class="on"></span><span></span></div>
+      <h1>Pick your buddy</h1>
+      <div class="stage compact" id="setupPetStage"><canvas class="stage-bg"></canvas><div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your chosen pet"></canvas></div></div>
+      <div class="picker three" id="setupPetPicker" role="group" aria-label="Choose a pet"></div>
+      <form class="block" id="setupPetForm" novalidate>
+        <div class="field">
+          <label class="label" for="setupPetNameInput" id="setupPetNameLabel">Name your buddy</label>
+          <input type="text" id="setupPetNameInput" maxlength="16" autocomplete="off">
+        </div>
+        <p class="error" id="setupPetNameError" role="alert"></p>
+        <div class="btnrow">
+          <button class="btn ghost" type="button" id="setupPetBack">Back</button>
+          <button class="btn" type="submit">Next</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================== SETUP 3: COLOUR + BACKGROUND ===================== -->
+    <section class="screen" id="screenSetupLook" hidden>
+      <div class="steps" aria-label="Step 3 of 3"><span class="on"></span><span class="on"></span><span class="on"></span></div>
+      <h1>Pick your colour</h1>
+      <div class="stage compact" id="setupLookStage"><canvas class="stage-bg"></canvas><span class="nameplate"></span><div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your pet"></canvas></div></div>
+      <section class="block">
+        <p class="hint">This colours your whole game. You can change it later in Buddies.</p>
+        <div class="picker colours" id="setupColourPicker" role="group" aria-label="Choose a colour"></div>
+      </section>
+      <p class="error" id="setupLookError" role="alert"></p>
+      <div class="btnrow">
+        <button class="btn ghost" type="button" id="setupLookBack">Back</button>
+        <button class="btn" type="button" id="setupLookConfirm">Let's go</button>
+      </div>
+    </section>
+
+    <!-- ===================== HOME (GAME) ===================== -->
+    <section class="screen" id="screenGame" hidden>
+      <!-- Now and then: suggest adding Voxie to the home screen (not shown once installed) -->
+      <section class="install-banner" id="installBanner" hidden>
+        <div class="install-text"><strong>Get the Voxie app</strong><span>Add it to your home screen. It opens straight into the game.</span></div>
+        <div class="btnrow">
+          <button type="button" class="btn small" id="installBannerButton">Get the app</button>
+          <button type="button" class="btn small ghost" id="installBannerLater">Not now</button>
+        </div>
+      </section>
+      <section class="levelup" id="levelUpBanner" role="status" hidden>
+        <h2 id="levelUpTitle"></h2>
+        <p id="levelUpText"></p>
+        <div class="btnrow">
+          <button type="button" class="btn ghost small" id="levelUpGo">Try it now</button>
+          <button type="button" class="btn ghost small" id="levelUpClose">Nice!</button>
+        </div>
+      </section>
+      <div class="stage compact" id="gameStage">
+        <canvas class="stage-bg"></canvas>
+        <span class="nameplate"></span>
+        <button type="button" class="stage-corner-button settings-button" id="openConfigButton" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button>
+        <div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your pet"></canvas></div>
+        <!-- Pokémon-style message box: appears across the bottom when a task is ticked, then goes away by itself (tap to skip). -->
+        <div class="pet-message" id="petMessage" role="status" aria-live="polite" hidden><b id="petMessageName"></b><span id="petMessageText"></span><span class="pet-message-arrow" aria-hidden="true">▼</span></div>
+      </div>
+
+      <!-- Powers switched on by the items in use (Home only shows this when there are some) -->
+      <section class="powers-strip" id="powersStrip" hidden>
+        <span class="label" id="powersLabel">Powers on</span>
+        <div class="power-chips" id="powerChips"></div>
+        <button type="button" class="btn small chance-gold" id="claimMilestoneButton" hidden></button>
+        <button type="button" class="btn small chance-gold" id="claimTreasureButton" hidden>Treasure finder: open your free item</button>
+      </section>
+      <section class="block">
+        <div class="stats">
+          <div class="stat">
+            <span class="label">Level</span>
+            <span class="big" id="levelNumber"></span>
+            <div class="xpbar" id="levelBar"></div>
+          </div>
+          <div class="stat">
+            <span class="label">XP</span>
+            <span class="big" id="xpNumber"></span>
+            <span class="hint">Earn it from missions. Spend it in the Shop or power up your items.</span>
+            <button type="button" class="btn small" id="openShopButton">Shop</button>
+          </div>
+          <div class="stat wide">
+            <span class="label" id="streakLabel">Streak</span>
+            <span class="big" id="streakNumber"></span>
+            <div class="week" id="weekStrip"></div>
+          </div>
+        </div>
+        <p class="hint" id="nextUnlock"></p>
+      </section>
+
+      <section class="block">
+        <h2>Today's tasks</h2>
+        <p class="hint" id="taskSnackHint"></p>
+        <p class="hint">Want tasks that come back every day, like brushing your teeth? <button type="button" class="linkish" id="goToScheduledTasks">Set them up in Settings</button></p>
+        <div id="choreArea"></div>
+        <form class="addown" id="addOwnTaskForm" novalidate>
+          <div class="field">
+            <label class="label" for="addOwnTaskInput">Did something else helpful today?</label>
+            <div class="addown-row">
+              <input type="text" id="addOwnTaskInput" maxlength="40" autocomplete="off" placeholder="e.g. Helped carry the shopping">
+              <button class="btn small" type="submit" id="addOwnTaskButton">Add</button>
+            </div>
+          </div>
+          <p class="error" id="addOwnTaskError" role="alert"></p>
+          <p class="hint" id="addOwnTaskHint"></p>
+        </form>
+      </section>
+
+      <section class="block" id="missionArea"></section>
+    </section>
+
+    <!-- ===================== INVENTORY ===================== -->
+    <section class="screen" id="screenInventory" hidden>
+      <div class="switcher" role="group" aria-label="Inventory or Shop">
+        <button type="button" data-stuff="screenInventory" aria-pressed="true">My stuff</button>
+        <button type="button" data-stuff="screenShop" aria-pressed="false">Shop</button>
+      </div>
+      <div class="stage compact" id="inventoryStage"><canvas class="stage-bg"></canvas><span class="nameplate"></span><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button><div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your pet with your items"></canvas></div></div>
+      <div class="sortbar" role="group" aria-label="Sort by">
+        <span class="label">Sort by</span>
+        <button type="button" id="inventorySortByType" aria-pressed="true">Type</button>
+        <button type="button" id="inventorySortByRarity" aria-pressed="false">Rarity</button>
+        <button type="button" id="inventorySortBySeasonPass" aria-pressed="false">Season pass</button>
+      </div>
+      <div class="subtabs" id="inventorySubtabs" role="tablist" aria-label="Inventory sections"><span class="subtab-slider" aria-hidden="true"></span></div>
+      <p class="hint" id="inventorySummary"></p>
+      <div class="inventory-grid" id="inventoryGrid" role="tabpanel"></div>
+    </section>
+
+    <!-- ===================== SHOP (buy things with XP instead of levelling up) ===================== -->
+    <section class="screen" id="screenShop" hidden>
+      <div class="settings-row"><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button></div>
+      <div class="switcher" role="group" aria-label="Inventory or Shop">
+        <button type="button" data-stuff="screenInventory" aria-pressed="false">My stuff</button>
+        <button type="button" data-stuff="screenShop" aria-pressed="true">Shop</button>
+      </div>
+      <div class="shop-wallet"><span class="label">Your XP</span><span class="big" id="shopXpNumber"></span><span class="hint">Shop things don't need a level. Buy them with XP from missions.</span></div>
+      <div class="inventory-grid" id="shopGrid"></div>
+    </section>
+
+    <!-- ===================== BUDDIES (your pets + customising the one that's out) ===================== -->
+    <section class="screen" id="screenBuddies" hidden>
+      <div class="customise-preview">
+        <div class="stage compact" id="customiseStage"><canvas class="stage-bg"></canvas><span class="nameplate"></span><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button><div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your pet"></canvas></div></div>
+      </div>
+      <section class="block">
+        <div class="section-head"><h2>Your buddies</h2><span class="collected" id="buddiesLevelAndXp"></span></div>
+        <p class="hint" id="buddiesHint"></p>
+        <div class="buddy-grid" id="buddyGrid"></div>
+        <!-- Rebirth: pick a pet type you haven't collected and name it. It starts at level 1. -->
+        <form class="adopt-panel" id="rebirthPanel" novalidate hidden>
+          <span class="label">Pick your next pet</span>
+          <div class="picker three" id="rebirthPetPicker" role="group" aria-label="Choose a pet"></div>
+          <div class="field">
+            <label class="label" for="rebirthPetNameInput" id="rebirthPetNameLabel">Name your buddy</label>
+            <input type="text" id="rebirthPetNameInput" maxlength="16" autocomplete="off">
+          </div>
+          <p class="hint" id="rebirthNote"></p>
+          <p class="error" id="rebirthError" role="alert"></p>
+          <div class="btnrow">
+            <button class="btn" type="submit" id="rebirthConfirm">Rebirth</button>
+            <button class="btn ghost" type="button" id="rebirthCancel">Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="block">
+        <h2 id="customisePetHeading"></h2>
+        <span class="saved" id="customiseStatus" role="status">Changes save straight away</span>
+        <p class="hint">Keep levelling up to unlock more.</p>
+        <span class="label">Colour</span>
+        <div class="picker three" id="customiseBodyColourPicker" role="group" aria-label="Body colour"></div>
+        <span class="label">Face</span>
+        <div class="picker three" id="customiseFacePicker" role="group" aria-label="Face"></div>
+        <span class="label">Arms</span>
+        <div class="picker four" id="customiseArmsPicker" role="group" aria-label="Arms"></div>
+        <span class="label">Width</span>
+        <div class="picker four" id="customiseWidthPicker" role="group" aria-label="Width"></div>
+        <span class="label">Height</span>
+        <div class="picker four" id="customiseHeightPicker" role="group" aria-label="Height"></div>
+      </section>
+
+      <section class="block">
+        <h2 id="gameColourHeading">Game colour</h2>
+        <div class="picker colours" id="customiseThemePicker" role="group" aria-label="Game colour"></div>
+      </section>
+
+    </section>
+
+    <!-- ===================== LOCATIONS ===================== -->
+    <section class="screen" id="screenLocations" hidden>
+      <div class="switcher" role="group" aria-label="Places">
+        <button type="button" data-places="screenHouse" aria-pressed="false">House</button>
+        <button type="button" data-places="screenLocations" aria-pressed="true">Locations</button>
+      </div>
+      <div class="stage compact" id="locationsStage"><canvas class="stage-bg"></canvas><span class="nameplate"></span><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button><div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your pet where it is now"></canvas></div></div>
+      <div class="sortbar" role="group" aria-label="Sort by">
+        <span class="label">Sort by</span>
+        <button type="button" id="locationsSortByAll" aria-pressed="true">All</button>
+        <button type="button" id="locationsSortBySeasonPass" aria-pressed="false">Season pass</button>
+      </div>
+      <p class="hint" id="locationsHint"></p>
+      <div class="place-grid" id="locationsGrid"></div>
+    </section>
+
+    <!-- ===================== HOUSE ===================== -->
+    <section class="screen" id="screenHouse" hidden>
+      <div class="switcher" role="group" aria-label="Places">
+        <button type="button" data-places="screenHouse" aria-pressed="true">House</button>
+        <button type="button" data-places="screenLocations" aria-pressed="false">Locations</button>
+      </div>
+      <div class="stage compact" id="houseStage"><canvas class="stage-bg"></canvas><span class="nameplate"></span><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button><div class="stage-petbox"><canvas class="stage-pet" width="280" height="200" aria-label="Your pet at home"></canvas></div></div>
+      <div class="sortbar" role="group" aria-label="Sort by">
+        <span class="label">Sort by</span>
+        <button type="button" id="houseSortByType" aria-pressed="true">Type</button>
+        <button type="button" id="houseSortByRarity" aria-pressed="false">Rarity</button>
+        <button type="button" id="houseSortBySeasonPass" aria-pressed="false">Season pass</button>
+      </div>
+      <div class="subtabs" id="houseSubtabs" role="tablist" aria-label="House sections"><span class="subtab-slider" aria-hidden="true"></span></div>
+      <p class="hint" id="houseHint"></p>
+      <div class="place-grid" id="houseGrid"></div>
+    </section>
+
+    <!-- ===================== FRIENDS (see how friends are getting on) ===================== -->
+    <section class="screen" id="screenFriends" hidden>
+      <div class="settings-row"><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button></div>
+      <!-- Friend requests sent to you (the number on the Friends tab) -->
+      <section class="block" id="friendRequestsBlock" hidden>
+        <h2>Friend requests</h2>
+        <div class="request-list" id="friendRequestList"></div>
+      </section>
+      <!-- Requests you've sent that are waiting for a yes -->
+      <section class="block" id="sentRequestsBlock" hidden>
+        <h2>Waiting for a reply</h2>
+        <div class="request-list" id="sentRequestList"></div>
+      </section>
+      <form class="block" id="friendSearchForm" novalidate>
+        <h2>Find friends</h2>
+        <div class="search-row">
+          <label class="visually-hidden" for="friendSearchInput">Search by name</label>
+          <input type="search" id="friendSearchInput" placeholder="Type a name" autocomplete="off" maxlength="16">
+          <button class="btn" type="submit">Search</button>
+        </div>
+        <p class="hint" id="friendSearchHint"></p>
+        <div class="request-list" id="friendSearchResults"></div>
+      </form>
+      <h2 class="list-heading" id="friendsHeading">Your friends</h2>
+      <div class="friend-list" id="friendList"></div>
+    </section>
+
+    <!-- ===================== CONFIG (opened from the ⚙ on Home) ===================== -->
+    <section class="screen" id="screenConfig" hidden>
+      <div class="gamehead"><button type="button" class="btn small ghost" id="configBackButton">← Back</button></div>
+      <p class="hint" id="configSignedInAs"></p>
+      <section class="block">
+        <h2>Settings</h2>
+        <p class="settings-locked-note" id="settingsLockedNote" hidden></p>
+        <div class="setting">
+          <div class="text"><strong><label for="settingTimedMissions">Timed missions</label></strong><span class="hint">A clock gives you time to read each mission, then a few seconds to answer. Off means no clock at all.</span></div>
+          <input type="checkbox" class="switch" id="settingTimedMissions" role="switch">
+        </div>
+        <div class="setting">
+          <div class="text"><strong><label for="settingResetStreak">Reset streak if a day is missed</label></strong><span class="hint">On: your streak goes back to 0 if you miss a day. Off: it counts every day you've played.</span></div>
+          <input type="checkbox" class="switch" id="settingResetStreak" role="switch">
+        </div>
+        <div class="setting">
+          <div class="text"><strong><label for="settingChanceFeatures">Mystery boxes and Take a chance</label></strong><span class="hint">On: buy Mystery boxes and risk new items for rarer ones. Off: these are hidden.</span></div>
+          <input type="checkbox" class="switch" id="settingChanceFeatures" role="switch">
+        </div>
+        <p class="error" id="settingsError" role="alert"></p>
+      </section>
+      <section class="block" id="linkGrownUpSection" aria-labelledby="linkGrownUpHeading">
+        <h2 id="linkGrownUpHeading">Link a grown-up</h2>
+        <ul class="grown-up-list" id="grownUpList" hidden></ul>
+        <p class="hint" id="linkGrownUpText"></p>
+      </section>
+      <section class="block" id="installSection">
+        <h2>Get the Voxie app</h2>
+        <p class="hint" id="installSectionText">Put Voxie on your home screen so it opens like an app, with no web address bar.</p>
+        <button type="button" class="btn" id="installSettingsButton">Get the app</button>
+        <p class="hint" id="installHelp" role="status"></p>
+      </section>
+      <section class="block scheduled" id="scheduledSection">
+        <h2>Scheduled tasks</h2>
+        <p class="hint">Tasks that come back on the days you pick, like brushing your teeth. They show up in Today's tasks. You can have up to 10 tasks a day in total.</p>
+        <ul class="schedule-list" id="scheduleList"></ul>
+        <form class="schedule-form" id="scheduleForm" novalidate>
+          <div class="field">
+            <label class="label" for="scheduleTitleInput">What's the task?</label>
+            <input type="text" id="scheduleTitleInput" maxlength="40" autocomplete="off" placeholder="e.g. Brush teeth">
+          </div>
+          <span class="label" id="scheduleDaysLabel">Which days?</span>
+          <div class="daypick" id="scheduleDayPicker" role="group" aria-labelledby="scheduleDaysLabel"></div>
+          <div class="quickdays">
+            <button type="button" class="btn small ghost" id="scheduleEveryDay">Every day</button>
+            <button type="button" class="btn small ghost" id="scheduleSchoolDays">School days</button>
+            <button type="button" class="btn small ghost" id="scheduleWeekends">Weekends</button>
+          </div>
+          <span class="label" id="scheduleTimesLabel">How many times a day?</span>
+          <div class="stepper" role="group" aria-labelledby="scheduleTimesLabel">
+            <button type="button" id="scheduleTimesDown" aria-label="Fewer times">−</button>
+            <output id="scheduleTimesValue" aria-live="polite">1</output>
+            <button type="button" id="scheduleTimesUp" aria-label="More times">+</button>
+          </div>
+          <p class="error" id="scheduleError" role="alert"></p>
+          <button class="btn" type="submit" id="scheduleAddButton">Add scheduled task</button>
+        </form>
+      </section>
+      <button class="btn ghost" type="button" id="logOutButton">Log out</button>
+    </section>
+
+    <!-- ===================== PROTOTYPE CONTROLS (delete in Claude Code) ===================== -->
+    <details class="proto" id="prototypeControls">
+      <summary>Prototype controls</summary>
+      <div class="inner">
+        <label><input type="checkbox" id="protoFailSaves"> Make saves fail (see the error message)</label>
+        <label><input type="checkbox" id="protoNoChores"> Pretend no tasks are set</label>
+        <button class="btn small ghost" type="button" id="protoAddXp">Add 5 task points (test unlocks)</button>
+        <button class="btn small ghost" type="button" id="protoAddMissionXp">Add 20 XP (test spending)</button>
+        <button class="btn small ghost" type="button" id="protoJumpTo100">Playing buddy to level 100 (test rebirth)</button>
+        <button class="btn small ghost" type="button" id="protoReset">Reset test data</button>
+      </div>
+    </details>
+  </div>
+
+  <nav class="tabbar" id="tabBar" aria-label="Main" hidden>
+    <div class="tabs">
+      <button type="button" class="tab" data-tab="home"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="2" height="1"/><rect x="5" y="1" width="2" height="1"/><rect x="0" y="2" width="8" height="2"/><rect x="1" y="4" width="6" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="3" y="6" width="2" height="1"/></svg>Home</button>
+      <button type="button" class="tab" data-tab="inventory"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="0" width="6" height="1"/><rect x="0" y="1" width="8" height="2"/><rect x="0" y="4" width="8" height="4"/><rect x="3" y="3" width="2" height="2"/></svg>Inventory</button>
+      <button type="button" class="tab" data-tab="places"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="2" y="1" width="4" height="1"/><rect x="1" y="2" width="6" height="1"/><rect x="0" y="3" width="8" height="1"/><rect x="1" y="4" width="2" height="4"/><rect x="5" y="4" width="2" height="4"/><rect x="3" y="4" width="2" height="1"/></svg>Places</button>
+      <button type="button" class="tab" data-tab="buddies"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="2" y="0" width="4" height="1"/><rect x="1" y="1" width="6" height="1"/><rect x="0" y="2" width="8" height="4"/><rect x="1" y="6" width="6" height="1"/><rect x="2" y="7" width="2" height="1"/></svg>Buddies</button>
+      <button type="button" class="tab" data-tab="friends"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="0" width="2" height="2"/><rect x="5" y="1" width="2" height="2"/><rect x="0" y="3" width="4" height="4"/><rect x="4" y="4" width="4" height="3"/></svg>Friends</button>
+    </div>
+  </nav>
+
+  <div class="sheet-backdrop" id="itemSheet" hidden>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="itemSheetName">
+      <div class="sheet-top">
+        <canvas id="itemSheetPreview" width="112" height="112" aria-hidden="true"></canvas>
+        <div class="sheet-title">
+          <h2 id="itemSheetName"></h2>
+          <span id="itemSheetRarity"></span>
+          <span class="hint" id="itemSheetType"></span>
+        </div>
+        <button type="button" class="sheet-close" id="itemSheetClose" aria-label="Close">✕</button>
+      </div>
+      <dl class="sheet-stats">
+        <div><dt>Rarity</dt><dd id="itemStatRarity"></dd></div>
+        <div><dt>Colour</dt><dd id="itemStatColour"></dd></div>
+        <div><dt>XP</dt><dd id="itemStatXp" class="stat-number"></dd></div>
+        <div><dt>Ability level</dt><dd id="itemStatAbility"></dd></div>
+      </dl>
+      <div class="colour-panel" id="itemColourPanel" hidden></div>
+      <p class="hint" id="itemAbilityNext"></p>
+      <ul class="ability-list" id="itemAbilityList"></ul>
+      <div class="btnrow" id="itemSheetButtons">
+        <button type="button" class="btn" id="itemSheetUse"></button>
+        <button type="button" class="btn ghost" id="itemSheetAddXp">Add XP</button>
+      </div>
+      <p class="hint" id="itemAddXpHint"></p>
+      <!-- Choose how much of your XP to put into this item -->
+      <div class="add-xp-panel" id="itemAddXpPanel" hidden>
+        <span class="label" id="itemAddXpAvailable"></span>
+        <div class="xp-stepper" role="group" aria-label="How much XP to add">
+          <button type="button" class="xp-step" id="itemAddXpLess" aria-label="Less XP">−</button>
+          <output class="xp-amount" id="itemAddXpAmount" aria-live="polite">1</output>
+          <button type="button" class="xp-step" id="itemAddXpMore" aria-label="More XP">+</button>
+          <button type="button" class="xp-step xp-max" id="itemAddXpMax">Max</button>
+        </div>
+        <span class="hint" id="itemAddXpPreview"></span>
+        <div class="btnrow">
+          <button type="button" class="btn" id="itemAddXpConfirm"></button>
+          <button type="button" class="btn ghost" id="itemAddXpCancel">Cancel</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Log in pop-up (opened from the homepage's Log in buttons) -->
+  <div class="sheet-backdrop" id="loginSheet" hidden>
+    <section class="sheet login-sheet" role="dialog" aria-modal="true" aria-labelledby="loginSheetTitle">
+      <div class="sheet-top"><span class="text-logo small">Voxie</span><button type="button" class="sheet-close" id="loginSheetClose" aria-label="Close">✕</button></div>
+      <form class="login-pop-form" id="loginForm" novalidate>
+        <h2 id="loginSheetTitle">Log in</h2>
+        <div class="field">
+          <label class="label" for="loginEmail">Username or email</label>
+          <input type="text" id="loginEmail" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+          <span class="hint">Kids: your username. Grown-ups: your email.</span>
+        </div>
+        <div class="field">
+          <label class="label" for="loginPasscode">Your passcode</label>
+          <input type="password" id="loginPasscode" autocomplete="current-password">
+        </div>
+        <p class="error" id="loginError" role="alert"></p>
+        <button class="btn" type="submit" id="loginButton">Let's play</button>
+        <button type="button" class="linkish" id="forgotPasscodeButton">Forgotten your passcode?</button>
+        <p class="hint">New here? A grown-up <button type="button" class="linkish inline" data-scroll-to="signUpSection">sets up Voxie</button> for you.</p>
+      </form>
+      <!-- Forgotten passcode: we email a link to make a new one -->
+      <form class="login-pop-form" id="forgotPasscodeForm" novalidate hidden>
+        <h2>Forgotten your passcode?</h2>
+        <p class="forgot-kids"><strong>Kids:</strong> ask your grown-up. They can make you a new passcode in their Voxie account.</p>
+        <p class="hint"><strong>Grown-ups:</strong> type your email and we'll send you a link to make a new password.</p>
+        <div class="field">
+          <label class="label" for="forgotEmail">Your email</label>
+          <input type="email" id="forgotEmail" autocomplete="username" inputmode="email">
+        </div>
+        <p class="error" id="forgotError" role="alert"></p>
+        <p class="hint" id="forgotSent" role="status"></p>
+        <div class="btnrow">
+          <button class="btn" type="submit" id="forgotSendButton">Send the link</button>
+          <button class="btn ghost" type="button" id="forgotBackButton">Back</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- Chance: the odds, then the reveal. Used by the Mystery box and "Take a chance". -->
+  <div class="sheet-backdrop" id="chanceSheet" hidden>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="chanceSheetTitle">
+      <div class="sheet-top">
+        <div class="chance-preview" id="chancePreviewBox"><canvas id="chanceSheetPreview" width="112" height="112" aria-hidden="true"></canvas></div>
+        <div class="sheet-title">
+          <h2 id="chanceSheetTitle"></h2>
+          <span id="chanceSheetBadge"></span>
+          <span class="hint" id="chanceSheetSub"></span>
+        </div>
+        <button type="button" class="sheet-close" id="chanceSheetClose" aria-label="Close">✕</button>
+      </div>
+      <p class="chance-question" id="chanceSheetNote" role="status"></p>
+      <ul class="odds-list" id="chanceOdds"></ul>
+      <ul class="ability-list" id="chanceSheetPowers" hidden></ul>
+      <!-- New unlock: the two choices side by side -->
+      <div class="btnrow chance-choices" id="chanceChoiceRow" hidden>
+        <button type="button" class="btn ghost" id="chanceKeepButton">Keep it</button>
+        <button type="button" class="btn chance-gold" id="chanceTakeButton">Take a chance</button>
+      </div>
+      <button type="button" class="btn" id="chanceSheetGo"></button>
+    </section>
+  </div>
+
+  <!-- Buying something in the Shop -->
+  <div class="sheet-backdrop" id="buySheet" hidden>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="buySheetName">
+      <div class="sheet-top">
+        <canvas id="buySheetPreview" width="112" height="112" aria-hidden="true"></canvas>
+        <div class="sheet-title">
+          <h2 id="buySheetName"></h2>
+          <span id="buySheetRarity"></span>
+          <span class="hint" id="buySheetType"></span>
+        </div>
+        <button type="button" class="sheet-close" id="buySheetClose" aria-label="Close">✕</button>
+      </div>
+      <dl class="sheet-stats">
+        <div><dt>Price</dt><dd id="buySheetPrice" class="stat-number"></dd></div>
+        <div><dt>Your XP</dt><dd id="buySheetWallet" class="stat-number"></dd></div>
+      </dl>
+      <ul class="ability-list" id="buySheetPowers"></ul>
+      <p class="hint" id="buySheetMessage" role="status"></p>
+      <button type="button" class="btn" id="buySheetBuy"></button>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="alert" hidden>
+    <p id="toastMessage"></p>
+    <button class="btn small ghost" type="button" id="toastRetry">Try again</button>
+    <button class="toast-close" type="button" id="toastClose" aria-label="Close message">✕</button>
+  </div>
+
+  <!-- Before content: the registry and everything content files are checked against or drawn with. -->
+  <script src="/voxie/content/registry.js"></script>
+  <script src="/voxie/content/themes.js"></script>
+  <script src="/voxie/engine/scene.js"></script>
+  <script src="/voxie/content/customise.js"></script>
+  <script src="/voxie/content/inventory.js"></script>
+  <script src="/voxie/content/powers.js"></script>
+  <!-- Registers every file in content/items, pets, locations and missions, then loads the game (see loader.js). -->
+  <script type="module" src="/voxie/content/loader.js"></script>
+</body>
+</html>

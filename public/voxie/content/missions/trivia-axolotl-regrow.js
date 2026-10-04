@@ -1,0 +1,1 @@
+export default { type:"trivia", id:"trivia-axolotl-regrow", difficulty:1, kind:"Brain block", question:"Axolotls can regrow which of these?", options:["Just their tail","Legs, gills and even bits of their heart","Nothing, they're just cute"], correctIndex:1, explanation:"Axolotls can regrow legs, gills, parts of their heart and even parts of their brain." };

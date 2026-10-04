@@ -1,0 +1,1 @@
+export default { type:"trivia", id:"trivia-venus-day", difficulty:3, kind:"Brain block", question:"Which planet has a day longer than its year?", options:["Mars","Venus","Jupiter"], correctIndex:1, explanation:"Venus spins so slowly that one day there lasts longer than its whole trip round the Sun." };

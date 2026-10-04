@@ -1,0 +1,1 @@
+export default { type:"puzzle", id:"puzzle-piano-keys", difficulty:1, kind:"Puzzle", question:"What has keys but can't open locks?", options:["A piano","A chest","A zombie"], correctIndex:0, explanation:"A piano. (A keyboard also works.)" };

@@ -1,0 +1,1 @@
+export default { type:"puzzle", id:"puzzle-doubling", difficulty:2, kind:"Puzzle", question:"What comes next? 2, 4, 8, 16, …", options:["20","24","32"], correctIndex:2, explanation:"Each number doubles, so 16 × 2 = 32." };
