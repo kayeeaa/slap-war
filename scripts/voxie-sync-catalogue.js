@@ -51,9 +51,20 @@ const missionRows = loadContentFolder('missions').map(mission => ({
     : null
 }))
 const powerRows = loadPowers().map(power => ({ id: power.id, advanced_value: power.values.advanced, master_value: power.values.master }))
+// Places and looks, which each new buddy gets in its own shuffled order (option_catalogue).
+function loadLooks() {
+  const source = fs.readFileSync(path.join(CONTENT, 'customise.js'), 'utf8') + '\n;({ BODY_COLOURS, FACES, ARM_POSES, BODY_WIDTHS, BODY_HEIGHTS })'
+  return vm.runInNewContext(source, {}, { filename: 'customise.js' })
+}
+const looks = loadLooks()
+const optionRows = [
+  ...loadContentFolder('locations').map(location => ({ kind: 'location', id: location.id, unlock_level: location.unlockLevel })),
+  ...[['body-colour', looks.BODY_COLOURS], ['face', looks.FACES], ['arms', looks.ARM_POSES], ['width', looks.BODY_WIDTHS], ['height', looks.BODY_HEIGHTS]]
+    .flatMap(([kind, options]) => options.map(option => ({ kind, id: option.id, unlock_level: option.unlockLevel })))
+]
 
-async function upsert(table, rows) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=id`, {
+async function upsert(table, rows, conflictColumns = 'id') {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictColumns}`, {
     method: 'POST',
     headers: {
       apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`,
@@ -70,4 +81,5 @@ async function upsert(table, rows) {
   await upsert('power_catalogue', powerRows)
   await upsert('item_catalogue', itemRows)
   await upsert('mission_catalogue', missionRows)
+  await upsert('option_catalogue', optionRows, 'kind,id')
 })().catch(error => { console.error(error.message); process.exit(1) })

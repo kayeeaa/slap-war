@@ -7,6 +7,7 @@ Files:
 - `supabase/migrations/20261007100000_voxie_games.sql`: the Games tab (Ping pong results and their XP). Run after the feature flags.
 - `supabase/migrations/20261007110000_voxie_snap.sql`: Snap, and a 10 XP daily limit for each game. Run after the games migration.
 - `supabase/migrations/20261007120000_voxie_games_for_everyone.sql`: Games no longer need a feature flag (the flag tables stay for future features).
+- `supabase/migrations/20261008090000_voxie_buddy_inventories.sql`: every buddy has its own XP, items, house, place and gear, and its own shuffled unlock order and Shop (`buddy_unlocks`, `buddy_shop`, `option_catalogue`). Run it **before** deploying the app that reads those tables.
 - `supabase/functions/_shared/voxie.ts` plus the `add-child`, `set-child-passcode` and `delete-child-account` folders.
 
 ## Calling conventions
@@ -31,6 +32,7 @@ Files:
 | loadMyBuddies | table `buddies` (order `adopted_on, created_at`) + `my_profile.active_buddy_id` | none | map to `{ id, petType, petName, petLook, themeColour, isActive }` |
 | rebirthAsNewPet | `rebirth_as_new_pet` | `p_pet_type, p_pet_name` | profile |
 | setActiveBuddy | `set_active_buddy` | `p_buddy_id` | profile |
+| loadMyBuddyDeals | tables `buddy_unlocks`, `buddy_shop` (the playing buddy's rows) | none | `{ unlockLevels: { kind: { id: level } }, shopStock: { itemId: inStock } }` |
 | searchPlayers | `search_players` | `p_search_text` | `[{ id, displayName, petType, petLook, relationship, requestId }]` |
 | sendFriendRequest | `send_friend_request` | `p_to_child_id` | none |
 | loadMyFriendRequests | `load_my_friend_requests` | none | `[{ id, fromChildId, displayName, petType, petLook }]` |

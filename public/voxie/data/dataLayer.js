@@ -55,6 +55,17 @@ async function readMyRows(table, columns, build = query => query) {
   if (error) throw new Error(error.message || "load-failed");
   return data;
 }
+/* Rows that belong to the PLAYING buddy: each buddy has its own items, item XP, colours and Shop buys.
+   Returns { rows, buddyId } (no rows before setup, when there's no buddy yet). */
+async function readMyBuddyRows(table, columns, build = query => query) {
+  const profile = await loadMyProfile();
+  const buddyId = profile && profile.active_buddy_id;
+  if (!buddyId) return { rows: [], buddyId: null };
+  // Row Level Security already limits every table to your own buddies, so the buddy is the only filter needed.
+  const { data, error } = await build(supabaseClient.from(table).select(columns).eq("buddy_id", buddyId));
+  if (error) throw new Error(error.message || "load-failed");
+  return { rows: data, buddyId };
+}
 /* An Edge Function; its errors come back as { error: "<code>" }. */
 async function callEdgeFunction(name, body) {
   const { data, error } = await supabaseClient.functions.invoke(name, { body });
@@ -118,6 +129,17 @@ const dataLayer = {
   /** Rebirth: a new pet type at level 1. Throws Error("no-rebirth") or Error("already-collected"). Returns the profile. */
   async rebirthAsNewPet(petType, petName) { return callRpc("rebirth_as_new_pet", { p_pet_type: petType, p_pet_name: petName }); },
   async setActiveBuddy(buddyId) { return callRpc("set_active_buddy", { p_buddy_id: buddyId }); },
+  /** The playing buddy's own unlock order and Shop, dealt out when the buddy was made:
+      { unlockLevels: { item | location | body-colour | face | arms | width | height: { id: level } }, shopStock: { itemId: true/false } }.
+      Anything not listed (added to the game later) unlocks at its usual level / is in the Shop. */
+  async loadMyBuddyDeals() {
+    const [{ rows: unlocks }, { rows: shop }] = await Promise.all([
+      readMyBuddyRows("buddy_unlocks", "kind, option_id, unlock_level"),
+      readMyBuddyRows("buddy_shop", "item_id, in_stock")]);
+    const unlockLevels = {};
+    unlocks.forEach(row => { (unlockLevels[row.kind] = unlockLevels[row.kind] || {})[row.option_id] = row.unlock_level; });
+    return { unlockLevels, shopStock: Object.fromEntries(shop.map(row => [row.item_id, row.in_stock])) };
+  },
   /** [{ id, displayName, petType, petLook, relationship, requestId }] */
   async searchPlayers(searchText) { return callRpc("search_players", { p_search_text: searchText }); },
   async sendFriendRequest(toChildId) { return callRpc("send_friend_request", { p_to_child_id: toChildId }); },
@@ -154,19 +176,19 @@ const dataLayer = {
   },
   async markScheduledTaskDone(scheduledTaskId, occurrence) { return callRpc("mark_scheduled_task_done", { p_scheduled_task_id: scheduledTaskId, p_occurrence: occurrence }); },
   async unmarkScheduledTaskDone(scheduledTaskId, occurrence) { return callRpc("unmark_scheduled_task_done", { p_scheduled_task_id: scheduledTaskId, p_occurrence: occurrence }); },
-  /** { itemId: xp } */
+  /** { itemId: xp } for the playing buddy. */
   async loadMyItemXp() {
-    const rows = await readMyRows("item_xp", "item_id, xp");
+    const { rows } = await readMyBuddyRows("item_xp", "item_id, xp");
     return Object.fromEntries(rows.map(row => [row.item_id, row.xp]));
   },
   /** Throws Error("not-enough-xp"). Returns the item's new XP total. */
   async addXpToItem(itemId, amount) { return callRpc("add_xp_to_item", { p_item_id: itemId, p_amount: amount }); },
-  /** { itemColours: { itemId: colourId }, gotAtLevels: { itemId: level } } for Shop and chance items. */
+  /** { itemColours: { itemId: colourId }, gotAtLevels: { itemId: level } } for the playing buddy's Shop and chance items. */
   async loadMyItemColours() {
-    const [colours, purchases, rolls] = await Promise.all([
-      readMyRows("item_colours", "item_id, colour_id"),
-      readMyRows("purchases", "item_id, got_at_level"),
-      readMyRows("chance_rolls", "won_item_id, won_at_level", query => query.not("won_item_id", "is", null))]);
+    const [{ rows: colours }, { rows: purchases }, { rows: rolls }] = await Promise.all([
+      readMyBuddyRows("item_colours", "item_id, colour_id"),
+      readMyBuddyRows("purchases", "item_id, got_at_level"),
+      readMyBuddyRows("chance_rolls", "won_item_id, won_at_level", query => query.not("won_item_id", "is", null))]);
     const gotAtLevels = {};
     const note = (itemId, level) => { if (itemId && level) gotAtLevels[itemId] = Math.min(gotAtLevels[itemId] ?? Infinity, level); };
     purchases.forEach(row => note(row.item_id, row.got_at_level));
@@ -174,16 +196,20 @@ const dataLayer = {
     return { itemColours: Object.fromEntries(colours.map(row => [row.item_id, row.colour_id])), gotAtLevels };
   },
   async setItemColour(itemId, colourId) { return callRpc("set_item_colour", { p_item_id: itemId, p_colour_id: colourId }); },
-  async loadMyPurchases() { return (await readMyRows("purchases", "item_id")).map(row => row.item_id); },
+  async loadMyPurchases() { return (await readMyBuddyRows("purchases", "item_id")).rows.map(row => row.item_id); },
   /** Throws Error("not-for-sale"), Error("already-owned") or Error("not-enough-xp"). Returns { pricePaid }. */
   async buyItem(itemId) { return callRpc("buy_item", { p_item_id: itemId }); },
-  /** { wonItemIds, swappedAwayItemIds, triedItemIds, boxesOpenedToday, treasureClaimedThisWeek, claimedMilestones } */
+  /** { wonItemIds, swappedAwayItemIds, triedItemIds, boxesOpenedToday, treasureClaimedThisWeek, claimedMilestones }
+      What was won, swapped and tried is the playing buddy's own; the daily and weekly limits are the child's. */
   async loadMyChanceHistory() {
     const today = getTodayInUk();
-    const rolls = await readMyRows("chance_rolls", "kind, outcome, risked_item_id, won_item_id, rolled_on, milestone_buddy_id, milestone_level");
-    const gambles = rolls.filter(row => row.kind === "gamble");
+    const [rolls, profile] = await Promise.all([
+      readMyRows("chance_rolls", "kind, outcome, risked_item_id, won_item_id, rolled_on, milestone_buddy_id, milestone_level, buddy_id"),
+      loadMyProfile()]);
+    const buddyId = profile && profile.active_buddy_id, buddyRolls = rolls.filter(row => row.buddy_id === buddyId);
+    const gambles = buddyRolls.filter(row => row.kind === "gamble");
     return {
-      wonItemIds: [...new Set(rolls.map(row => row.won_item_id).filter(Boolean))],
+      wonItemIds: [...new Set(buddyRolls.map(row => row.won_item_id).filter(Boolean))],
       swappedAwayItemIds: gambles.filter(row => row.outcome === "rarer" || row.outcome === "common").map(row => row.risked_item_id),
       triedItemIds: gambles.map(row => row.risked_item_id),
       boxesOpenedToday: rolls.filter(row => row.kind === "box" && row.rolled_on === today).length,

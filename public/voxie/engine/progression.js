@@ -34,13 +34,37 @@ const SCHOOL_DAYS = ["mon", "tue", "wed", "thu", "fri"], WEEKEND_DAYS = ["sat", 
 function getWeekDayIdInUk(isoDate) { return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date(isoDate + "T12:00:00Z").getUTCDay()]; }
 const lookRewards = (options, suffix, kind) => options.filter(option => option.unlockLevel > 1)
   .map(option => ({ level: option.unlockLevel, label: `${option.label} ${suffix}`, kind }));
-const LEVEL_REWARDS = [
+/* What each level gives. Rebuilt whenever the playing buddy changes, because each buddy unlocks things in its own order. */
+const buildLevelRewards = () => [
   ...INVENTORY_ITEMS.filter(item => item.unlockLevel !== undefined).map(item => ({ level: item.unlockLevel, label: item.label, kind: item.category === "house" ? "house" : "item", category: item.category, itemId: item.id })),
   { level: BIGGER_BUDDY_LEVEL, label: "a bigger buddy", kind: "growth" },
   ...lookRewards(BODY_COLOURS, "colour", "look"), ...lookRewards(FACES, "face", "look"),
   ...lookRewards(ARM_POSES, "arms", "look"), ...lookRewards(BODY_WIDTHS, "body", "look"),
   ...lookRewards(BODY_HEIGHTS, "body", "look"), ...lookRewards(LOCATIONS, "location", "location")
 ].sort((first, second) => first.level - second.level);
+let LEVEL_REWARDS = buildLevelRewards();
+
+/* ---------- Each buddy's own unlock order and Shop ----------
+   The server deals every buddy its own order when it's made (buddy_unlocks, buddy_shop): items, places and looks
+   above level 1 swap levels with others of the same kind, and its Shop sells about two thirds of the Shop items.
+   applyBuddyDeals() sets each option's unlockLevel to the playing buddy's, so the rest of the game just reads
+   unlockLevel as before. The levels in the content files are kept, for anything the deal doesn't mention. */
+const CONTENT_UNLOCK_LEVELS = new WeakMap();
+const DEALT_OPTION_LISTS = () => ({ item: INVENTORY_ITEMS, location: LOCATIONS, "body-colour": BODY_COLOURS, face: FACES,
+  arms: ARM_POSES, width: BODY_WIDTHS, height: BODY_HEIGHTS });
+let buddyShopStock = {};   // { itemId: false } for Shop items this buddy's Shop doesn't sell
+function applyBuddyDeals({ unlockLevels = {}, shopStock = {} } = {}) {
+  Object.entries(DEALT_OPTION_LISTS()).forEach(([kind, options]) => options.forEach(option => {
+    if (!CONTENT_UNLOCK_LEVELS.has(option)) CONTENT_UNLOCK_LEVELS.set(option, option.unlockLevel);
+    const contentLevel = CONTENT_UNLOCK_LEVELS.get(option);
+    if (contentLevel === undefined) return;   // not a level unlock (Shop or chance items)
+    option.unlockLevel = (unlockLevels[kind] || {})[option.id] ?? contentLevel;
+  }));
+  buddyShopStock = shopStock;
+  LEVEL_REWARDS = buildLevelRewards();
+}
+/* Does the playing buddy's Shop sell this? (Shop items added to the game later are always in stock.) */
+const inBuddyShop = item => item.xpPrice !== undefined && buddyShopStock[item.id] !== false;
 /* Level points come ONLY from tasks (1 per task ticked). Points needed to REACH each level:
    level 2 after 2 tasks, level 3 after 4 more, level 4 after 5 more. After that each level costs
    POINTS_PER_LEVEL_AFTER_LAST, plus 1 more task for every LEVELS_PER_EXTRA_TASK levels, never more than

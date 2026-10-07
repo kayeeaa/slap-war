@@ -140,9 +140,9 @@ function weekStartOf(isoDate) {
 /* The level of the buddy that's playing (shown on screen, makes the pet bigger at BIGGER_BUDDY_LEVEL). */
 function currentLevel() { return calculateLevel(currentProgress.levelPoints); }
 function buddyLevel(buddyId) { return calculateLevel((currentProgress.buddyLevelPoints || {})[buddyId] || 0); }
-/* Unlocks use the highest level the child has EVER reached with any buddy, so starting a new pet, or un-ticking a
-   task, never locks things again. */
-function unlockedLevel() { return Math.max(currentLevel(), currentProgress.highestLevelReached || 1, ...myBuddies.map(buddy => buddyLevel(buddy.id))); }
+/* Unlocks use the highest level the PLAYING buddy has ever reached, so un-ticking a task never locks things again.
+   Each buddy has its own items and unlock order: a new buddy starts again from level 1. */
+function unlockedLevel() { return Math.max(currentLevel(), currentProgress.highestLevelReached || 1); }
 function rebirthsAvailableNow() { return rebirthsAvailable(myBuddies.map(buddy => buddyLevel(buddy.id))); }
 function petTypesNotCollected() { return PET_ORDER.filter(petType => !myBuddies.some(buddy => buddy.petType === petType)); }
 function petName() { return currentProfile ? currentProfile.pet_name : "your pet"; }
@@ -685,16 +685,25 @@ function reloadIfNewDay() {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) reloadIfNewDay(); });
 setInterval(() => { if (!document.hidden) reloadIfNewDay(); }, 60000);
+/* Everything that belongs to the playing buddy: its level and XP, items, item XP, colours, chance history,
+   and its own unlock order and Shop. Loaded with the game, and again after switching buddy or a rebirth. */
+async function loadPlayingBuddyData() {
+  let deals;
+  [currentProgress, myItemXp, myPurchases, myChance, itemColourData, deals] = await Promise.all([
+    dataLayer.loadProgressSummary(), dataLayer.loadMyItemXp(), dataLayer.loadMyPurchases(), dataLayer.loadMyChanceHistory(),
+    dataLayer.loadMyItemColours(), dataLayer.loadMyBuddyDeals()]);
+  ({ itemColours: myItemColours, gotAtLevels: myGotAtLevels } = itemColourData);
+  applyBuddyDeals(deals);
+}
 async function openGame() {
   showScreen("screenLoading");
   try {
     let freshProfile;
-    [myChores, choresDoneToday, myOwnTasksToday, myScheduledTasks, scheduledDoneToday, currentProgress, myItemXp, myBuddies, myPurchases, myChance, itemColourData, freshProfile] = await Promise.all([
+    [myChores, choresDoneToday, myOwnTasksToday, myScheduledTasks, scheduledDoneToday, myBuddies, freshProfile] = await Promise.all([
       dataLayer.loadMyChores(), dataLayer.loadChoresDoneToday(), dataLayer.loadMyOwnTasksToday(),
-      dataLayer.loadMyScheduledTasks(), dataLayer.loadScheduledTasksDoneToday(), dataLayer.loadProgressSummary(), dataLayer.loadMyItemXp(),
-      dataLayer.loadMyBuddies(), dataLayer.loadMyPurchases(), dataLayer.loadMyChanceHistory(), dataLayer.loadMyItemColours(), dataLayer.getSignedInProfile()]);
+      dataLayer.loadMyScheduledTasks(), dataLayer.loadScheduledTasksDoneToday(), dataLayer.loadMyBuddies(), dataLayer.getSignedInProfile(),
+      loadPlayingBuddyData()]);
     takeGrownUpSettings(freshProfile);
-    ({ itemColours: myItemColours, gotAtLevels: myGotAtLevels } = itemColourData);
   } catch (error) {
     showSaveError("Couldn't load your game. Check your internet and try again.", openGame);
     return;
@@ -794,10 +803,11 @@ function renderProgress() {
 }
 
 /* ---------- Powers strip on Home ---------- */
-/* Free boxes waiting: one for every MILESTONE_EVERY_LEVELS levels each buddy has reached. */
+/* Free boxes waiting: one for every MILESTONE_EVERY_LEVELS levels the playing buddy has reached
+   (each buddy opens its own, and what's inside is that buddy's). */
 function unclaimedMilestones() {
   const claimed = myChance.claimedMilestones || [];
-  return myBuddies.flatMap(buddy => {
+  return myBuddies.filter(buddy => buddy.id === currentProfile.active_buddy_id).flatMap(buddy => {
     const reached = [];
     for (let level = MILESTONE_EVERY_LEVELS; level <= buddyLevel(buddy.id); level += MILESTONE_EVERY_LEVELS)
       if (!claimed.includes(`${buddy.id}:${level}`)) reached.push({ buddyId: buddy.id, buddyName: buddy.petName, level });
@@ -1574,7 +1584,9 @@ async function switchToBuddy(buddyId) {
   try {
     currentProfile = await dataLayer.setActiveBuddy(buddyId);
     myBuddies = myBuddies.map(buddy => ({ ...buddy, isActive: buddy.id === buddyId }));
-    currentProgress.levelPoints = (currentProgress.buddyLevelPoints || {})[buddyId] || 0;
+    // Each buddy has its own items, XP, place and unlock order: load this one's.
+    await loadPlayingBuddyData();
+    levelsSeen = {};
     applyThemeColour(currentProfile.theme_colour);   // each buddy has its own game colour
     hideSaveError();
     renderBuddies();
@@ -1588,7 +1600,7 @@ function openRebirthPanel() {
   rebirthPetType = petTypesNotCollected()[0];
   element("rebirthPetNameInput").value = "";
   showFieldError("rebirthPetNameInput", "rebirthError", "");
-  element("rebirthNote").textContent = `${petName()} will become an angel. You can switch back any time and carry on from level ${currentLevel()}.`;
+  element("rebirthNote").textContent = `${petName()} will become an angel and keep all their things. Your new buddy starts from scratch, with its own XP, items, places and Shop, unlocked in a new order. You can switch back to ${petName()} any time and carry on from level ${currentLevel()}.`;
   renderRebirthPicker();
   renderBuddyList();
   element("rebirthPanel").scrollIntoView({ block: "nearest" });
@@ -1620,7 +1632,8 @@ element("rebirthPanel").onsubmit = async event => {
   rebirthPanelOpen = false;
   button.disabled = false;
   // The rebirth worked. If refreshing fails, reload the whole game rather than say it failed.
-  try { [myBuddies, currentProgress] = await Promise.all([dataLayer.loadMyBuddies(), dataLayer.loadProgressSummary()]); }
+  // The new buddy starts from scratch with its own unlock order and Shop.
+  try { [myBuddies] = await Promise.all([dataLayer.loadMyBuddies(), loadPlayingBuddyData()]); levelsSeen = {}; }
   catch (error) { openGame(); return; }
   hideSaveError();
   renderBuddies();
@@ -1670,7 +1683,9 @@ function openShop() { showScreen("screenShop"); renderShop(); }
 function renderShop() {
   const look = lookFromProfile(currentProfile), wallet = xpToSpend();
   element("shopXpNumber").textContent = wallet;
-  const shopItems = INVENTORY_ITEMS.filter(isShopItem).sort((first, second) => first.xpPrice - second.xpPrice);
+  // Each buddy's Shop sells its own selection (anything this buddy already bought stays on show).
+  const shopItems = INVENTORY_ITEMS.filter(item => inBuddyShop(item) || (isShopItem(item) && myPurchases.includes(item.id)))
+    .sort((first, second) => first.xpPrice - second.xpPrice);
   const grid = element("shopGrid");
   const boxPrizes = mysteryBoxChances(ownsItemNow, powerValue("lucky")), boxesLeft = MYSTERY_BOXES_PER_DAY - myChance.boxesOpenedToday;
   const boxCard = !chanceFeaturesOn() ? "" : `<button type="button" class="item mystery-box${wallet < MYSTERY_BOX_PRICE ? " too-dear" : ""}" id="mysteryBoxCard">
