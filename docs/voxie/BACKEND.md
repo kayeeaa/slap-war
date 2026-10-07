@@ -4,6 +4,9 @@ Files:
 
 - `supabase/migrations/20261004120000_voxie_backend.sql`: paste into the SQL Editor and run it once.
 - `supabase/migrations/20261007090000_voxie_feature_flags.sql`: per-user feature flags (see `FEATURES.md`).
+- `supabase/migrations/20261007100000_voxie_games.sql`: the Games tab (Ping pong results and their XP). Run after the feature flags.
+- `supabase/migrations/20261007110000_voxie_snap.sql`: Snap, and a 10 XP daily limit for each game. Run after the games migration.
+- `supabase/migrations/20261007120000_voxie_games_for_everyone.sql`: Games no longer need a feature flag (the flag tables stay for future features).
 - `supabase/functions/_shared/voxie.ts` plus the `add-child`, `set-child-passcode` and `delete-child-account` folders.
 
 ## Calling conventions
@@ -64,6 +67,9 @@ Files:
 | markChoreDone / unmarkChoreDone | `mark_chore_done` / `unmark_chore_done` | `p_chore_id` | none |
 | saveMissionCompletion | `save_mission_completion` | `p_mission_id, p_choice_index, p_used_hint, p_used_think_again, p_did_it` | `{ xpAwarded, brainBoost }` (+ `alreadySaved`) |
 | loadProgressSummary | `load_progress_summary` | none | exactly the fake's shape |
+| saveGameResult | `save_game_result` | `p_game, p_my_points, p_bot_points, p_lose_points_on_loss` | `{ xpAwarded, won, hitDailyLimit }` |
+| saveSnapResult | `save_snap_result` | `p_mode, p_score, p_lose_points_on_loss` | `{ xpAwarded, won, hitDailyLimit }` |
+| loadMyGameXpToday | table `game_results` (today's rows) | none | XP from each game today, e.g. `{ "ping-pong": 4, snap: 3 }` |
 | signUpParent | `auth.signUp({ email, password, options: { data: { display_name }, emailRedirectTo } })`; the trigger makes the profile | none | profile from `my_profile` |
 | loadMyChildren | `load_my_children` | none | `[{ id, displayName, setupComplete, level, petName, look }]` |
 | loadChildOverview | `load_child_overview` | `p_child_id` | the fake's shape; see the streak note below |

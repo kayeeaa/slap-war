@@ -213,6 +213,23 @@ const dataLayer = {
         daysPlayedDates, missionsDoneToday, hintsUsedToday, thinkAgainsUsedToday, missionsLastDoneOn } */
   async loadProgressSummary() { return callRpc("load_progress_summary"); },
 
+  /* ---------- Games tab ---------- */
+  /** A finished match (one side on 3). The SERVER works out the XP: 1 per point, 0 if lost with losePointsOnLoss,
+      and no more than the daily limit. Returns { xpAwarded, won, hitDailyLimit }. */
+  async saveGameResult(game, myPoints, botPoints, losePointsOnLoss) {
+    return callRpc("save_game_result", { p_game: game, p_my_points: myPoints, p_bot_points: botPoints, p_lose_points_on_loss: losePointsOnLoss });
+  },
+  /** A finished Snap game: score is the scored half's total (+5 a snap, -5 a miss). The SERVER works out the XP:
+      3 for winning (above 0), 1 for trying, 0 if lost with losePointsOnLoss, within Snap's daily limit. Returns { xpAwarded, won, hitDailyLimit }. */
+  async saveSnapResult(mode, score, losePointsOnLoss) {
+    return callRpc("save_snap_result", { p_mode: mode, p_score: score, p_lose_points_on_loss: losePointsOnLoss });
+  },
+  /** XP from each game today, for "X of 10 XP today": { "ping-pong": 4, snap: 3 }. Each game has its own limit. */
+  async loadMyGameXpToday() {
+    const rows = await readMyRows("game_results", "game, xp_awarded", query => query.eq("played_on", getTodayInUk()));
+    return rows.reduce((totals, row) => ({ ...totals, [row.game]: (totals[row.game] || 0) + row.xp_awarded }), {});
+  },
+
   /* ---------- Grown-up accounts ---------- */
   /** A grown-up signs up: { displayName, email, password }. With "Confirm email" on there's no session until they
       click the link, so this returns { needsEmailConfirmation: true }; otherwise their profile.

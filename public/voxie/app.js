@@ -32,13 +32,18 @@ function showScreen(screenId) {
   element("chanceSheet").hidden = true;
   if (typeof newItemQueue !== "undefined") newItemQueue = [];
   if (typeof stopMissionTimer === "function") stopMissionTimer();
+  if (typeof stopPong === "function") stopPong();
+  if (typeof stopSnap === "function") stopSnap();
   if (typeof clearPetMessageTimers === "function") { clearPetMessageTimers(); element("petMessage").hidden = true; }
   ALL_SCREENS.forEach(id => element(id).hidden = id !== screenId);
   if (screenId === "screenLoading") drawLoadingBuddy(element("loadingScreenBuddy"));
   if (typeof startAngelAnimation === "function") startAngelAnimation();
   element("tabBar").hidden = !TAB_SCREENS.includes(screenId);
-  document.querySelector('.tab[data-tab="games"]').hidden = !featureOn("games");
-  document.querySelectorAll(".tab").forEach(tab => tab.dataset.tab === TAB_FOR_SCREEN[screenId] ? tab.setAttribute("aria-current", "page") : tab.removeAttribute("aria-current"));
+  document.querySelectorAll(".tab[data-tab]").forEach(tab => tab.dataset.tab === TAB_FOR_SCREEN[screenId] ? tab.setAttribute("aria-current", "page") : tab.removeAttribute("aria-current"));
+  // More lights up for the tabs inside it.
+  if (element("moreMenu").querySelector(`[data-tab="${TAB_FOR_SCREEN[screenId]}"]`)) element("moreTab").setAttribute("aria-current", "page");
+  else element("moreTab").removeAttribute("aria-current");
+  closeMoreMenu();
   window.scrollTo(0, 0);
 }
 
@@ -420,7 +425,16 @@ function takeGrownUpSettings(fresh) {
 function refreshGrownUpSettings() { dataLayer.getSignedInProfile().then(takeGrownUpSettings).catch(() => {}); }
 
 /* ---------- tabs ---------- */
-document.querySelectorAll(".tab").forEach(tab => tab.onclick = () => {
+/* More (+) opens a menu with the tabs that don't fit in the bar (Buddies and Friends). */
+function closeMoreMenu() { element("moreMenu").hidden = true; element("moreTab").setAttribute("aria-expanded", "false"); }
+element("moreTab").onclick = () => {
+  const opening = element("moreMenu").hidden;
+  element("moreMenu").hidden = !opening;
+  element("moreTab").setAttribute("aria-expanded", String(opening));
+};
+document.addEventListener("click", event => { if (!element("moreMenu").hidden && !element("tabBar").contains(event.target)) closeMoreMenu(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !element("moreMenu").hidden) { closeMoreMenu(); element("moreTab").focus(); } });
+document.querySelectorAll(".tab[data-tab]").forEach(tab => tab.onclick = () => {
   hideSaveError();
   hideLevelUp();
   applyThemeColour(currentProfile.theme_colour);
@@ -436,8 +450,209 @@ document.querySelectorAll(".tab").forEach(tab => tab.onclick = () => {
   if (tabName === "games") openGames();
 });
 function openHome() { showScreen("screenGame"); renderHome(); showNewTaskNotifications(true); }
-/* Games: mini-games to play with your buddy. Only users with the "games" feature see the tab. */
-function openGames() { showScreen("screenGames"); }
+/* ---------- Games tab ----------
+   Mini-games to play with your buddy.
+   Each game saves its result through the dataLayer; the server gives the XP, at most MAX_GAME_XP_PER_DAY a day from EACH game. */
+const MAX_GAME_XP_PER_DAY = 10;   // the server's limit too (private.game_xp_to_award): keep them the same
+let gameXpToday = {};             // { "ping-pong": 4, snap: 3 }
+/* "Lose my points if I lose" (every game) is in Settings. It's remembered on this device for each child. */
+const GAMES_RISK_KEY = () => `voxie-games-lose-points:${currentProfile.id}`;
+function losePointsOnLoss() { try { return localStorage.getItem(GAMES_RISK_KEY()) === "on"; } catch (error) { return false; } }
+element("gamesRiskSwitch").onchange = event => { try { localStorage.setItem(GAMES_RISK_KEY(), event.target.checked ? "on" : "off"); } catch (error) {} };
+function renderGamesSetting() {
+  element("gamesRiskSwitch").checked = losePointsOnLoss();
+}
+
+async function openGames() {
+  showScreen("screenGames");
+  renderGamesXpToday();
+  renderPong();
+  renderSnap();
+  try { gameXpToday = await dataLayer.loadMyGameXpToday(); renderGamesXpToday(); } catch (error) {}
+}
+/* Each game shows its own "X of 10 XP today". */
+const GAME_XP_LINES = { "ping-pong": "pongXpToday", snap: "snapXpToday" };
+function renderGamesXpToday() {
+  Object.entries(GAME_XP_LINES).forEach(([game, lineId]) => {
+    const xp = gameXpToday[game] || 0;
+    element(lineId).textContent = xp >= MAX_GAME_XP_PER_DAY
+      ? `You've got all ${MAX_GAME_XP_PER_DAY} XP from this game today. Keep playing for fun, and come back tomorrow for more!`
+      : `XP from this game today: ${xp} of ${MAX_GAME_XP_PER_DAY}.`;
+  });
+}
+function addGameXp(game, xpAwarded) {
+  currentProgress.xpEarned += xpAwarded;
+  gameXpToday = { ...gameXpToday, [game]: (gameXpToday[game] || 0) + xpAwarded };
+  renderGamesXpToday();
+}
+
+/* ---------- Ping pong (engine/pong.js) ---------- */
+/* The court moves through every location in the game, one per match, in the Places order (starting at Mountains).
+   Where it's got to is remembered on this device for each child. */
+const pongCourts = () => [...LOCATIONS].sort((first, second) => first.unlockLevel - second.unlockLevel);
+const PONG_COURT_KEY = () => `voxie-pong-court:${currentProfile.id}`;
+function pongCourt() {
+  const courts = pongCourts();
+  let saved = null;
+  try { saved = localStorage.getItem(PONG_COURT_KEY()); } catch (error) {}
+  return courts.find(location => location.id === saved) || courts.find(location => location.id === "mountains") || courts[0];
+}
+function moveToNextPongCourt() {
+  const courts = pongCourts(), next = courts[(courts.indexOf(pongCourt()) + 1) % courts.length];
+  try { localStorage.setItem(PONG_COURT_KEY(), next.id); } catch (error) {}
+}
+let pongGame = null, pongBotPetType = null, pongRiskThisMatch = false;
+function pongScene() {
+  const look = gameLook(), court = pongCourt();
+  element("pongCourtName").textContent = `Court: ${court.label}`;
+  element("pongCourt").setAttribute("aria-label", `Ping pong court: ${court.label}. Your buddy's bat is on the left.`);
+  return { locationId: court.id, themeColour: getThemeColour(look.themeColour), botPetType: pongBotPetType,
+    look: { petType: look.petType, petLook: look.petLook, equipped: look.equipped, level: look.level, itemColours: myItemColours } };
+}
+/* The bot is a different kind of buddy each match. */
+function pickPongBot() {
+  const others = PET_ORDER.filter(petType => petType !== lookFromProfile(currentProfile).petType);
+  pongBotPetType = others[Math.floor(Math.random() * others.length)] || PET_ORDER[0];
+}
+function renderPongScore(myPoints, botPoints) {
+  element("pongScore").innerHTML = `<span>${escapeHtml(petName() || "You")}</span><strong>${myPoints} – ${botPoints}</strong><span>Bot ${escapeHtml(PET_TYPES[pongBotPetType].label)}</span>`;
+}
+function renderPong() {
+  if (pongGame && pongGame.isRunning()) return;
+  if (!pongBotPetType) pickPongBot();
+  if (pongGame) pongGame.setScene(pongScene());
+  else pongGame = createPongGame(element("pongCourt"), pongScene(), { onScore: renderPongScore, onMatchEnd: finishPongMatch });
+  renderPongScore(0, 0);
+}
+function setPongPlaying(playing) { element("pongPlay").hidden = playing; }
+element("pongPlay").onclick = () => {
+  hideSaveError();
+  if (reloadIfNewDay()) return;
+  stopSnap();   // one game at a time
+  pickPongBot();
+  pongGame.setScene(pongScene());
+  pongRiskThisMatch = losePointsOnLoss();   // fixed for the match once it starts
+  renderPongScore(0, 0);
+  element("pongMessage").textContent = `First to ${PONG_POINTS_TO_WIN} wins!`;
+  setPongPlaying(true);
+  pongGame.start();
+};
+/* Leaving the screen or closing the drop-down stops a match. A match that isn't finished isn't saved. */
+function stopPong() {
+  if (!pongGame || !pongGame.isRunning()) return;
+  pongGame.stop();
+  setPongPlaying(false);
+  element("pongPlay").textContent = "Play";
+  element("pongMessage").textContent = "Match stopped. Press Play to start again.";
+}
+element("pongPanel").ontoggle = () => { if (!element("pongPanel").open) stopPong(); };
+function finishPongMatch(myPoints, botPoints) {
+  setPongPlaying(false);
+  // The next match is somewhere new: show it now, ready for Play again.
+  moveToNextPongCourt();
+  pongGame.setScene(pongScene());
+  element("pongPlay").textContent = "Play again";
+  element("pongMessage").textContent = myPoints > botPoints ? "You win! Saving…" : "Saving…";
+  savePongResult(myPoints, botPoints, pongRiskThisMatch);
+}
+async function savePongResult(myPoints, botPoints, losePoints) {
+  try {
+    const result = await dataLayer.saveGameResult("ping-pong", myPoints, botPoints, losePoints);
+    addGameXp("ping-pong", result.xpAwarded);
+    element("pongMessage").textContent = pongResultMessage(myPoints, botPoints, losePoints, result);
+  } catch (error) {
+    element("pongMessage").textContent = "";
+    showSaveError("Couldn't save your match. Check your internet and try again.", () => savePongResult(myPoints, botPoints, losePoints));
+  }
+}
+function pongResultMessage(myPoints, botPoints, losePoints, { xpAwarded, won, hitDailyLimit }) {
+  const xp = points => `${points} XP`;
+  const limit = hitDailyLimit ? ` That's all the XP from Ping pong for today.` : "";
+  if (won) return `You win ${myPoints}–${botPoints}! +${xp(xpAwarded)}.${limit}`;
+  const lost = `Bot ${PET_TYPES[pongBotPetType].label} wins ${botPoints}–${myPoints}.`;
+  if (myPoints === 0) return `${lost} Have another go!`;
+  if (losePoints) return `${lost} You lose the ${xp(myPoints)} from this match.`;
+  return `${lost} You keep ${xp(xpAwarded)}.${limit}`;
+}
+
+/* ---------- Snap (engine/snap.js) ----------
+   The same game as /slap-war. 3 XP for winning (finishing above 0), 1 XP for trying. */
+let snapGame = null, snapRiskThisGame = false;
+const SNAP_MODE_KEY = () => `voxie-snap-mode:${currentProfile.id}`;
+function snapMode() { try { const mode = localStorage.getItem(SNAP_MODE_KEY()); return SNAP_MODES[mode] ? mode : "classic"; } catch (error) { return "classic"; } }
+function renderSnap() {
+  if (snapGame && snapGame.isRunning()) return;
+  const mode = snapMode();
+  document.querySelectorAll("[data-snap-mode]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.snapMode === mode)));
+  element("snapModeHint").textContent = SNAP_MODES[mode].description;
+  if (!snapGame) {
+    snapGame = createSnapGame({
+      arena: element("snapArena"), cards: [element("snapBotCard"), element("snapPlayerCard")],
+      botNumber: element("snapBotNumber"), playerNumber: element("snapPlayerNumber"), snapButton: element("snapButton"),
+      message: element("snapMessage"), score: element("snapScore"), phase: element("snapPhase"),
+      progress: element("snapProgress"), countdown: element("snapCountdown"),
+      overlay: element("snapOverlay"), overlaySmall: element("snapOverlaySmall"), overlayBig: element("snapOverlayBig"), overlayText: element("snapOverlayText")
+    }, { onEnd: finishSnapGame });
+  }
+  // Your buddy on your card; a different bot buddy on theirs.
+  const look = lookFromProfile(currentProfile), others = PET_ORDER.filter(petType => petType !== look.petType);
+  drawPet(element("snapPlayerBuddy"), look.petType, { fitTight: true, petLook: look.petLook, equipped: currentProfile.equipped_items.filter(itemId => getInventoryItem(itemId)) });
+  drawPet(element("snapBotBuddy"), others[Math.floor(Math.random() * others.length)] || PET_ORDER[0], { fitTight: true, itemColours: {} });
+  element("snapPlayerName").textContent = petName() || "You";
+}
+document.querySelectorAll("[data-snap-mode]").forEach(button => button.onclick = () => {
+  try { localStorage.setItem(SNAP_MODE_KEY(), button.dataset.snapMode); } catch (error) {}
+  renderSnap();
+});
+function setSnapPlaying(playing) {
+  element("snapSetup").hidden = playing;
+  element("snapArena").hidden = !playing;
+  element("snapPlay").hidden = playing;
+}
+element("snapPlay").onclick = () => {
+  hideSaveError();
+  if (reloadIfNewDay()) return;
+  stopPong();   // one game at a time
+  snapRiskThisGame = losePointsOnLoss();   // fixed for the game once it starts
+  element("snapResult").textContent = "";
+  setSnapPlaying(true);
+  // Bring the whole game into view: both cards and SNAP, clear of the tab bar.
+  window.scrollTo({ top: element("snapArena").getBoundingClientRect().top + window.scrollY - 12,
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  snapGame.start(snapMode());
+};
+/* Leaving the screen, closing the drop-down or Stop ends a game without saving it. */
+function stopSnap() {
+  if (!snapGame || !snapGame.isRunning()) return;
+  snapGame.stop();
+  setSnapPlaying(false);
+  element("snapPlay").textContent = "Play";
+  element("snapResult").textContent = "Game stopped. Press Play to start again.";
+}
+element("snapStop").onclick = stopSnap;
+element("snapPanel").ontoggle = () => { if (!element("snapPanel").open) stopSnap(); };
+function finishSnapGame(score, won) {
+  setSnapPlaying(false);
+  element("snapPlay").textContent = "Play again";
+  element("snapResult").textContent = won ? `You win with ${score}! Saving…` : "Saving…";
+  saveSnapResult(snapMode(), score, snapRiskThisGame);
+}
+async function saveSnapResult(mode, score, losePoints) {
+  try {
+    const result = await dataLayer.saveSnapResult(mode, score, losePoints);
+    addGameXp("snap", result.xpAwarded);
+    element("snapResult").textContent = snapResultMessage(score, losePoints, result);
+  } catch (error) {
+    element("snapResult").textContent = "";
+    showSaveError("Couldn't save your Snap game. Check your internet and try again.", () => saveSnapResult(mode, score, losePoints));
+  }
+}
+function snapResultMessage(score, losePoints, { xpAwarded, won, hitDailyLimit }) {
+  const limit = hitDailyLimit ? ` That's all the XP from Snap for today.` : "";
+  if (won) return `You win with ${score}! +${xpAwarded} XP.${limit}`;
+  if (losePoints) return `You finished on ${score}. Finish above 0 to win. You lose the XP for trying.`;
+  return `You finished on ${score}. Finish above 0 to win. +${xpAwarded} XP for trying.${limit}`;
+}
 /* Places remembers whether House or Locations was open last. */
 let lastPlacesScreen = "screenHouse";
 document.querySelectorAll("[data-places]").forEach(button => button.onclick = () => {
@@ -1791,13 +2006,15 @@ document.addEventListener("keydown", event => { if (event.key === "Escape" && !e
 /* ---------- Friends: see how friends (added by a grown-up) are getting on ---------- */
 /* Requests sent to you. The count shows on the Friends tab. */
 let myFriendRequests = [];
+/* The number shows on Friends and on More, which Friends is inside. */
 function renderFriendsBadge() {
-  const tab = document.querySelector('.tab[data-tab="friends"]');
-  let badge = tab.querySelector(".tab-badge");
-  if (!myFriendRequests.length) { if (badge) badge.remove(); tab.removeAttribute("aria-label"); return; }
-  if (!badge) { badge = document.createElement("span"); badge.className = "tab-badge"; badge.setAttribute("aria-hidden", "true"); tab.append(badge); }
-  badge.textContent = myFriendRequests.length > 9 ? "9+" : myFriendRequests.length;
-  tab.setAttribute("aria-label", `Friends, ${myFriendRequests.length} new friend request${myFriendRequests.length === 1 ? "" : "s"}`);
+  [[document.querySelector('.tab[data-tab="friends"]'), "Friends"], [element("moreTab"), "More"]].forEach(([tab, label]) => {
+    let badge = tab.querySelector(".tab-badge");
+    if (!myFriendRequests.length) { if (badge) badge.remove(); tab.removeAttribute("aria-label"); return; }
+    if (!badge) { badge = document.createElement("span"); badge.className = "tab-badge"; badge.setAttribute("aria-hidden", "true"); tab.append(badge); }
+    badge.textContent = myFriendRequests.length > 9 ? "9+" : myFriendRequests.length;
+    tab.setAttribute("aria-label", `${label}, ${myFriendRequests.length} new friend request${myFriendRequests.length === 1 ? "" : "s"}`);
+  });
 }
 /* Checked when the game loads and on every tab change. (Supabase: a realtime subscription can push these instead.) */
 async function refreshFriendRequests() {
@@ -2117,6 +2334,7 @@ function openConfigScreen() {
   ["gameNameError", "gameNameDone"].forEach(id => element(id).textContent = "");
   element("gameNameInput").removeAttribute("aria-invalid");
   renderChildSettings();
+  renderGamesSetting();
   element("settingsError").textContent = "";
   // A grown-up may have changed these since the game loaded, so check again.
   dataLayer.getSignedInProfile().then(fresh => {

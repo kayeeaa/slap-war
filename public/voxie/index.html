@@ -597,10 +597,64 @@
       <div class="settings-row"><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button></div>
       <section class="block">
         <h2>Games</h2>
-        <div id="gamesList">
-          <div class="empty"><strong>New games are on the way</strong><span class="hint">Mini-games to play with your buddy will show up here.</span></div>
-        </div>
+        <!-- "Lose my points if I lose" is in Settings with the rest of the settings -->
+        <p class="hint">Play as much as you like. Each game gives up to 10 XP a day.</p>
       </section>
+      <!-- Each game is a drop-down under its own header -->
+      <details class="game-panel" id="pongPanel">
+        <summary>Ping pong</summary>
+        <div class="game-body">
+          <p class="hint" id="pongXpToday"></p>
+          <p class="pong-score" id="pongScore" aria-live="polite"></p>
+          <p class="hint" id="pongCourtName"></p>
+          <canvas class="pong-court" id="pongCourt" width="640" height="400" aria-label="Ping pong court. Your buddy's bat is on the left."></canvas>
+          <p class="hint">Slide your finger or mouse up and down the court, or use the ↑ and ↓ keys. First to 3 wins. You get 1 XP for every point you score.</p>
+          <p class="game-message" id="pongMessage" role="status"></p>
+          <button type="button" class="btn" id="pongPlay">Play</button>
+        </div>
+      </details>
+      <details class="game-panel" id="snapPanel">
+        <summary>Snap</summary>
+        <div class="game-body">
+          <p class="hint" id="snapXpToday"></p>
+          <div class="snap-setup" id="snapSetup">
+            <div class="snap-modes" role="group" aria-label="Snap mode">
+              <button type="button" class="snap-mode" data-snap-mode="classic" aria-pressed="true"><strong>Classic</strong><span>Match the numbers</span></button>
+              <button type="button" class="snap-mode" data-snap-mode="hard" aria-pressed="false"><strong>Hard</strong><span>Match on numbers and colours</span></button>
+            </div>
+            <!-- Changes with the mode picked (SNAP_MODES in engine/snap.js) -->
+            <p class="hint" id="snapModeHint" aria-live="polite"></p>
+          </div>
+          <!-- The game: bot card on top, SNAP in the middle, your card underneath -->
+          <div class="snap-arena" id="snapArena" hidden>
+            <div class="snap-top" id="snapTop">
+              <span class="snap-phase" id="snapPhase">Warm-up</span>
+              <span class="snap-score">Score <strong id="snapScore">--</strong></span>
+              <button type="button" class="btn small ghost" id="snapStop">Stop</button>
+            </div>
+            <div class="snap-progress" aria-hidden="true"><div class="snap-progress-fill" id="snapProgress"></div><span class="snap-countdown" id="snapCountdown">30</span></div>
+            <div class="snap-card" id="snapBotCard">
+              <span class="snap-card-label"><canvas id="snapBotBuddy" width="48" height="42" aria-hidden="true"></canvas>Bot</span>
+              <span class="snap-number" id="snapBotNumber" aria-live="off">--</span>
+            </div>
+            <div class="snap-middle">
+              <p class="snap-message" id="snapMessage" role="status"></p>
+              <button type="button" class="snap-button" id="snapButton">SNAP!</button>
+            </div>
+            <div class="snap-card" id="snapPlayerCard">
+              <span class="snap-card-label"><canvas id="snapPlayerBuddy" width="48" height="42" aria-hidden="true"></canvas><span id="snapPlayerName">You</span></span>
+              <span class="snap-number" id="snapPlayerNumber" aria-live="off">--</span>
+            </div>
+            <div class="snap-overlay" id="snapOverlay" hidden>
+              <p class="snap-overlay-small" id="snapOverlaySmall"></p>
+              <p class="snap-overlay-big" id="snapOverlayBig"></p>
+              <p class="snap-overlay-text" id="snapOverlayText"></p>
+            </div>
+          </div>
+          <p class="game-message" id="snapResult" role="status"></p>
+          <button type="button" class="btn" id="snapPlay">Play</button>
+        </div>
+      </details>
     </section>
 
     <!-- ===================== FRIENDS (see how friends are getting on) ===================== -->
@@ -663,6 +717,11 @@
           <div class="text"><strong><label for="settingChanceFeatures">Mystery boxes and Take a chance</label></strong><span class="hint">On: buy Mystery boxes and risk new items for rarer ones. Off: these are hidden.</span></div>
           <input type="checkbox" class="switch" id="settingChanceFeatures" role="switch">
         </div>
+        <!-- For every game. Remembered on this device, so a grown-up's lock doesn't apply to it. -->
+        <div class="setting" id="gamesRiskSetting">
+          <div class="text"><strong><label for="gamesRiskSwitch">Lose my points if I lose</label></strong><span class="hint">On: lose a game and you lose the XP you scored in it. Off: you keep every point, in every game.</span></div>
+          <input type="checkbox" class="switch" id="gamesRiskSwitch" role="switch">
+        </div>
         <p class="error" id="settingsError" role="alert"></p>
       </section>
       <section class="block" id="linkGrownUpSection" aria-labelledby="linkGrownUpHeading">
@@ -708,13 +767,16 @@
 
   <nav class="tabbar" id="tabBar" aria-label="Main" hidden>
     <div class="tabs">
-      <!-- Games: only shown to users with the "games" feature (see docs/voxie/FEATURES.md) -->
-      <button type="button" class="tab" data-tab="games" hidden><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="0" y="2" width="8" height="4"/><rect x="0" y="6" width="2" height="1"/><rect x="6" y="6" width="2" height="1"/><rect x="2" y="3" width="1" height="3" fill="var(--surface)"/><rect x="1" y="4" width="3" height="1" fill="var(--surface)"/><rect x="5" y="3" width="1" height="1" fill="var(--surface)"/><rect x="6" y="4" width="1" height="1" fill="var(--surface)"/></svg>Games</button>
       <button type="button" class="tab" data-tab="home"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="2" height="1"/><rect x="5" y="1" width="2" height="1"/><rect x="0" y="2" width="8" height="2"/><rect x="1" y="4" width="6" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="3" y="6" width="2" height="1"/></svg>Home</button>
       <button type="button" class="tab" data-tab="inventory"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="0" width="6" height="1"/><rect x="0" y="1" width="8" height="2"/><rect x="0" y="4" width="8" height="4"/><rect x="3" y="3" width="2" height="2"/></svg>Inventory</button>
+      <button type="button" class="tab" data-tab="games"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="0" y="2" width="8" height="4"/><rect x="0" y="6" width="2" height="1"/><rect x="6" y="6" width="2" height="1"/><rect x="2" y="3" width="1" height="3" fill="var(--surface)"/><rect x="1" y="4" width="3" height="1" fill="var(--surface)"/><rect x="5" y="3" width="1" height="1" fill="var(--surface)"/><rect x="6" y="4" width="1" height="1" fill="var(--surface)"/></svg>Games</button>
       <button type="button" class="tab" data-tab="places"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="2" y="1" width="4" height="1"/><rect x="1" y="2" width="6" height="1"/><rect x="0" y="3" width="8" height="1"/><rect x="1" y="4" width="2" height="4"/><rect x="5" y="4" width="2" height="4"/><rect x="3" y="4" width="2" height="1"/></svg>Places</button>
-      <button type="button" class="tab" data-tab="buddies"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="2" y="0" width="4" height="1"/><rect x="1" y="1" width="6" height="1"/><rect x="0" y="2" width="8" height="4"/><rect x="1" y="6" width="6" height="1"/><rect x="2" y="7" width="2" height="1"/></svg>Buddies</button>
-      <button type="button" class="tab" data-tab="friends"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="0" width="2" height="2"/><rect x="5" y="1" width="2" height="2"/><rect x="0" y="3" width="4" height="4"/><rect x="4" y="4" width="4" height="3"/></svg>Friends</button>
+      <button type="button" class="tab tab-more" id="moreTab" aria-expanded="false" aria-controls="moreMenu"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="8"/><rect x="0" y="3" width="8" height="2"/></svg>More</button>
+    </div>
+    <!-- More: the tabs that don't fit in the bar -->
+    <div class="more-menu" id="moreMenu" hidden>
+        <button type="button" class="tab" data-tab="buddies"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="2" y="0" width="4" height="1"/><rect x="1" y="1" width="6" height="1"/><rect x="0" y="2" width="8" height="4"/><rect x="1" y="6" width="6" height="1"/><rect x="2" y="7" width="2" height="1"/></svg>Buddies</button>
+        <button type="button" class="tab" data-tab="friends"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="0" width="2" height="2"/><rect x="5" y="1" width="2" height="2"/><rect x="0" y="3" width="4" height="4"/><rect x="4" y="4" width="4" height="3"/></svg>Friends</button>
     </div>
   </nav>
 

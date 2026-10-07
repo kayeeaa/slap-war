@@ -34,7 +34,7 @@
 /* Buddies are listed in the order they're registered. Any new pet not in this list goes after these, by file name. */
 const PET_TYPE_ORDER = ["axolotl", "seal", "capybara", "fox", "frog", "panda", "penguin", "cat", "pug", "dino", "dragon", "shark", "owl", "slime", "robot"];
 /* Everything that's worked out from the content, in the order it needs to run. */
-const SCRIPTS_AFTER_CONTENT = ["/voxie/engine/progression.js", "/voxie/engine/pet.js", "/voxie/engine/missions.js", "/voxie/data/dataLayer.js", "/voxie/app.js"];
+const SCRIPTS_AFTER_CONTENT = ["/voxie/engine/progression.js", "/voxie/engine/pet.js", "/voxie/engine/missions.js", "/voxie/engine/pong.js", "/voxie/engine/snap.js", "/voxie/data/dataLayer.js", "/voxie/app.js"];
 
 function petTypeRank(fileName) {
   const index = PET_TYPE_ORDER.indexOf(fileName.replace(/\.js$/, ""));
