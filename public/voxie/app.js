@@ -4,10 +4,10 @@
    ====================================================================== */
 const element = id => document.getElementById(id);
 const escapeHtml = text => String(text).replace(/[&<>"]/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[character]));
-const ALL_SCREENS = ["screenLoading", "screenLogin", "screenParents", "screenParentHome", "screenSetupName", "screenSetupPet", "screenSetupLook", "screenGame", "screenInventory", "screenHouse", "screenLocations", "screenBuddies", "screenFriends", "screenConfig", "screenShop"];
-const TAB_SCREENS = ["screenGame", "screenInventory", "screenShop", "screenHouse", "screenLocations", "screenBuddies", "screenFriends", "screenConfig"];
+const ALL_SCREENS = ["screenLoading", "screenLogin", "screenParents", "screenParentHome", "screenSetupName", "screenSetupPet", "screenSetupLook", "screenGame", "screenInventory", "screenHouse", "screenLocations", "screenBuddies", "screenFriends", "screenConfig", "screenShop", "screenGames"];
+const TAB_SCREENS = ["screenGame", "screenInventory", "screenShop", "screenHouse", "screenLocations", "screenBuddies", "screenFriends", "screenConfig", "screenGames"];
 /* Which tab is lit for each screen. House and Locations share Places; Config is opened from Home. */
-const TAB_FOR_SCREEN = { screenGame: "home", screenConfig: "home", screenInventory: "inventory", screenShop: "inventory", screenHouse: "places", screenLocations: "places", screenBuddies: "buddies", screenFriends: "friends" };
+const TAB_FOR_SCREEN = { screenGame: "home", screenConfig: "home", screenInventory: "inventory", screenShop: "inventory", screenHouse: "places", screenLocations: "places", screenBuddies: "buddies", screenFriends: "friends", screenGames: "games" };
 const LOCK_ICON = `<svg class="lock-icon" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="2" y="0" width="4" height="1"/><rect x="1" y="1" width="1" height="3"/><rect x="6" y="1" width="1" height="3"/><rect x="0" y="3" width="8" height="5"/><rect x="3" y="5" width="2" height="2" fill="var(--sunk)"/></svg>`;
 
 let currentProfile = null;
@@ -37,6 +37,7 @@ function showScreen(screenId) {
   if (screenId === "screenLoading") drawLoadingBuddy(element("loadingScreenBuddy"));
   if (typeof startAngelAnimation === "function") startAngelAnimation();
   element("tabBar").hidden = !TAB_SCREENS.includes(screenId);
+  document.querySelector('.tab[data-tab="games"]').hidden = !featureOn("games");
   document.querySelectorAll(".tab").forEach(tab => tab.dataset.tab === TAB_FOR_SCREEN[screenId] ? tab.setAttribute("aria-current", "page") : tab.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
 }
@@ -432,8 +433,11 @@ document.querySelectorAll(".tab").forEach(tab => tab.onclick = () => {
   if (tabName === "places") { if (lastPlacesScreen === "screenLocations") openLocations(); else openHouse(); }
   if (tabName === "buddies") openBuddies();
   if (tabName === "friends") openFriends();
+  if (tabName === "games") openGames();
 });
 function openHome() { showScreen("screenGame"); renderHome(); showNewTaskNotifications(true); }
+/* Games: mini-games to play with your buddy. Only users with the "games" feature see the tab. */
+function openGames() { showScreen("screenGames"); }
 /* Places remembers whether House or Locations was open last. */
 let lastPlacesScreen = "screenHouse";
 document.querySelectorAll("[data-places]").forEach(button => button.onclick = () => {
@@ -441,7 +445,7 @@ document.querySelectorAll("[data-places]").forEach(button => button.onclick = ()
 });
 /* Settings can be opened from every tab (the ⚙ button). Back returns to the tab you came from. */
 const REOPEN_SCREEN = { screenGame: () => openHome(), screenInventory: () => openInventory(), screenShop: () => openShop(), screenHouse: () => openHouse(),
-  screenLocations: () => openLocations(), screenBuddies: () => openBuddies(), screenFriends: () => openFriends() };
+  screenLocations: () => openLocations(), screenBuddies: () => openBuddies(), screenFriends: () => openFriends(), screenGames: () => openGames() };
 let screenBeforeSettings = "screenGame";
 document.querySelectorAll(".settings-button").forEach(button => button.onclick = () => {
   const openScreen = ALL_SCREENS.find(id => !element(id).hidden);
@@ -545,6 +549,9 @@ function isItemShownInCollection(item, level) {
 function activePowers() { return currentProfile ? activePowersFor(currentProfile.equipped_items, myItemXp) : {}; }
 function powerValue(powerId) { return activePowers()[powerId] || 0; }
 function chanceFeaturesOn() { return currentProfile && currentProfile.chance_features !== false; }
+/* Features being rolled out: true if the signed-in user has this one (see docs/voxie/FEATURES.md).
+   The list comes with the profile, so a change shows next time they open the game. */
+function featureOn(featureId) { return !!currentProfile && (currentProfile.features || []).includes(featureId); }
 const ownsItemNow = itemId => { const item = getInventoryItem(itemId); return !!item && isItemUnlocked(item, unlockedLevel()); };
 /* Only on an item just unlocked: its unlock level is your newest (highest) level, and you haven't decided yet. */
 function canTakeAChance(item) {

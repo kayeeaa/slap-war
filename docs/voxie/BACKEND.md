@@ -3,6 +3,7 @@
 Files:
 
 - `supabase/migrations/20261004120000_voxie_backend.sql`: paste into the SQL Editor and run it once.
+- `supabase/migrations/20261007090000_voxie_feature_flags.sql`: per-user feature flags (see `FEATURES.md`).
 - `supabase/functions/_shared/voxie.ts` plus the `add-child`, `set-child-passcode` and `delete-child-account` folders.
 
 ## Calling conventions

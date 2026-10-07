@@ -592,6 +592,17 @@
       <div class="place-grid" id="houseGrid"></div>
     </section>
 
+    <!-- ===================== GAMES ===================== -->
+    <section class="screen" id="screenGames" hidden>
+      <div class="settings-row"><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button></div>
+      <section class="block">
+        <h2>Games</h2>
+        <div id="gamesList">
+          <div class="empty"><strong>New games are on the way</strong><span class="hint">Mini-games to play with your buddy will show up here.</span></div>
+        </div>
+      </section>
+    </section>
+
     <!-- ===================== FRIENDS (see how friends are getting on) ===================== -->
     <section class="screen" id="screenFriends" hidden>
       <div class="settings-row"><button type="button" class="stage-corner-button settings-button" aria-label="Settings"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="3" y="7" width="2" height="1"/><rect x="0" y="3" width="1" height="2"/><rect x="7" y="3" width="1" height="2"/><rect x="1" y="1" width="6" height="6"/><rect x="3" y="3" width="2" height="2" fill="var(--surface)"/></svg></button></div>
@@ -697,6 +708,8 @@
 
   <nav class="tabbar" id="tabBar" aria-label="Main" hidden>
     <div class="tabs">
+      <!-- Games: only shown to users with the "games" feature (see docs/voxie/FEATURES.md) -->
+      <button type="button" class="tab" data-tab="games" hidden><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="0" y="2" width="8" height="4"/><rect x="0" y="6" width="2" height="1"/><rect x="6" y="6" width="2" height="1"/><rect x="2" y="3" width="1" height="3" fill="var(--surface)"/><rect x="1" y="4" width="3" height="1" fill="var(--surface)"/><rect x="5" y="3" width="1" height="1" fill="var(--surface)"/><rect x="6" y="4" width="1" height="1" fill="var(--surface)"/></svg>Games</button>
       <button type="button" class="tab" data-tab="home"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="2" height="1"/><rect x="5" y="1" width="2" height="1"/><rect x="0" y="2" width="8" height="2"/><rect x="1" y="4" width="6" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="3" y="6" width="2" height="1"/></svg>Home</button>
       <button type="button" class="tab" data-tab="inventory"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="1" y="0" width="6" height="1"/><rect x="0" y="1" width="8" height="2"/><rect x="0" y="4" width="8" height="4"/><rect x="3" y="3" width="2" height="2"/></svg>Inventory</button>
       <button type="button" class="tab" data-tab="places"><svg viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><rect x="3" y="0" width="2" height="1"/><rect x="2" y="1" width="4" height="1"/><rect x="1" y="2" width="6" height="1"/><rect x="0" y="3" width="8" height="1"/><rect x="1" y="4" width="2" height="4"/><rect x="5" y="4" width="2" height="4"/><rect x="3" y="4" width="2" height="1"/></svg>Places</button>
